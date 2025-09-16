@@ -1,0 +1,7 @@
+[package]
+name = "llmup-llama-cpp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+llmup-llama-cpp-sys = { path = "../llmup-llama-cpp-sys", version = "0.1" }

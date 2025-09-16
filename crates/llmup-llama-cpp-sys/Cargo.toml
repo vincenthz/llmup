@@ -1,0 +1,12 @@
+[package]
+name = "llmup-llama-cpp-sys"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+link-cplusplus = "1"
+
+[build-dependencies]
+bindgen = "0.72"
+cc = { version = "1.2", features = ["parallel"] }
