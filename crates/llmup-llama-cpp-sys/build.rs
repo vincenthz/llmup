@@ -101,7 +101,6 @@ fn lib_ggml(lib_path: &Path) -> Vec<PathBuf> {
     common.include(&src_path);
     common.opt_level(3);
     common.flags(WARNING_FLAGS);
-    common.flags(["-MD", "-MT"]);
 
     common.define("GGML_SCHED_MAX_COPIES", "4");
     common.define("GGML_SHARED", None);
@@ -203,7 +202,6 @@ fn lib_llama(lib_path: &Path, ggml_objects: Vec<PathBuf>) {
     common.include(&src_path);
     common.opt_level(3);
     common.flags(WARNING_FLAGS);
-    common.flags(["-MD", "-MT"]);
     common.define("GGML_SCHED_MAX_COPIES", "4");
     common.define("GGML_SHARED", None);
     common.define("GGML_BUILD", None);
