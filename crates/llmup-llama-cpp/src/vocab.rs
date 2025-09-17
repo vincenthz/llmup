@@ -24,7 +24,6 @@ impl Vocab {
         let content = bytes.as_ptr() as *const c_char;
 
         let size = self.tokenize_size(bytes, first);
-        println!("tokenize size {}", size);
         let mut out = Vec::with_capacity(size);
 
         let out_ptr = out.as_mut_ptr() as *mut llama::llama_token;
@@ -71,5 +70,9 @@ impl Vocab {
 
     pub fn as_string(&self, token: Token) -> String {
         String::from_utf8(self.as_bytes(token)).unwrap()
+    }
+
+    pub fn is_eog(&self, token: Token) -> bool {
+        unsafe { llama::llama_vocab_is_eog(self.ptr, token.0) }
     }
 }

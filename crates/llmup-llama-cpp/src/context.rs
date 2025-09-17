@@ -16,17 +16,17 @@ impl Context {
         let mut batch =
             unsafe { llama::llama_batch_get_one(tokens_ptr as *mut i32, tokens.len() as i32) };
 
+        let mut new_token_id: llama::llama_token;
         loop {
             let ret = unsafe { llama::llama_decode(self.ptr, batch) };
             if ret != 0 {
                 panic!("decode failed");
             }
 
-            let mut new_token_id =
-                unsafe { llama::llama_sampler_sample(sampler.ptr, self.ptr, -1) };
+            let new_token = sampler.sample(self);
+            new_token_id = new_token.0;
 
-            let eog = unsafe { llama::llama_vocab_is_eog(vocab.ptr, new_token_id) };
-            if eog {
+            if vocab.is_eog(new_token) {
                 break;
             }
 

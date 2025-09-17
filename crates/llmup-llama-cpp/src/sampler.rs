@@ -2,6 +2,9 @@ use llmup_llama_cpp_sys;
 
 use llmup_llama_cpp_sys::llama;
 
+use crate::Context;
+use crate::token::Token;
+
 pub struct Sampler {
     pub(crate) ptr: *mut llama::llama_sampler,
 }
@@ -22,5 +25,9 @@ impl Sampler {
             llama::llama_sampler_chain_add(smpl, llama::llama_sampler_init_dist(0xFFFFFFFF));
             Self { ptr: smpl }
         }
+    }
+
+    pub fn sample(&self, context: &Context) -> Token {
+        Token(unsafe { llama::llama_sampler_sample(self.ptr, context.ptr, -1) })
     }
 }
