@@ -11,8 +11,30 @@ enum Backend {
     Cpu,
 }
 
+const WARNING_FLAGS: &[&str] = &[
+    //"-Wshadow",
+    "-Wstrict-prototypes",
+    "-Wpointer-arith",
+    "-Wmissing-prototypes",
+    "-Werror=implicit-int",
+    "-Werror=implicit-function-declaration",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Wcast-qual",
+    "-Wno-unused-function",
+    "-Wunreachable-code-break",
+    "-Wunreachable-code-return",
+    //"-Wdouble-promotion",
+];
+
 fn main() {
     let lib_path = std::path::PathBuf::from("libs");
+
+    if !lib_path.exists() {
+        panic!("cannot compile without cloning the llama.cpp git submodule")
+    }
+
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     bindings(&lib_path, &out_path);
@@ -78,6 +100,9 @@ fn lib_ggml(lib_path: &Path) -> Vec<PathBuf> {
     common.include(include_path);
     common.include(&src_path);
     common.opt_level(3);
+    common.flags(WARNING_FLAGS);
+    common.flags(["-MD", "-MT"]);
+
     common.define("GGML_SCHED_MAX_COPIES", "4");
     common.define("GGML_SHARED", None);
     common.define("GGML_BUILD", None);
@@ -91,16 +116,12 @@ fn lib_ggml(lib_path: &Path) -> Vec<PathBuf> {
     let mut cpp = common.clone();
 
     cpp.cpp(true).std("c++17");
-    for cpp_file in cpp_files {
-        cpp.file(src_path.join(cpp_file));
-    }
+    cpp.files(cpp_files.into_iter().map(|f| src_path.join(f)));
 
     // specialize for C
     let mut c = common;
     c.cpp(false).std("c11");
-    for c_file in c_files {
-        c.file(src_path.join(c_file));
-    }
+    c.files(c_files.into_iter().map(|f| src_path.join(f)));
 
     let backend = Backend::Cpu;
     match backend {
@@ -108,10 +129,8 @@ fn lib_ggml(lib_path: &Path) -> Vec<PathBuf> {
             let backend_dir = src_path.join("ggml-cpu");
             c.include(&backend_dir);
             cpp.include(&backend_dir);
-            for c_file in ["ggml-cpu.c", "quants.c", "arch/arm/quants.c"] {
-                c.file(backend_dir.join(c_file));
-            }
-            for cpp_file in [
+            let c_files = ["ggml-cpu.c", "quants.c", "arch/arm/quants.c"];
+            let cpp_files = [
                 "ggml-cpu.cpp",
                 "repack.cpp",
                 "hbm.cpp",
@@ -124,9 +143,10 @@ fn lib_ggml(lib_path: &Path) -> Vec<PathBuf> {
                 "ops.cpp",
                 "llamafile/sgemm.cpp",
                 "arch/arm/repack.cpp",
-            ] {
-                cpp.file(backend_dir.join(cpp_file));
-            }
+            ];
+
+            c.files(c_files.into_iter().map(|f| backend_dir.join(f)));
+            cpp.files(cpp_files.into_iter().map(|f| backend_dir.join(f)));
         }
     }
 
@@ -182,6 +202,8 @@ fn lib_llama(lib_path: &Path, ggml_objects: Vec<PathBuf>) {
     common.include(ggml_include_path);
     common.include(&src_path);
     common.opt_level(3);
+    common.flags(WARNING_FLAGS);
+    common.flags(["-MD", "-MT"]);
     common.define("GGML_SCHED_MAX_COPIES", "4");
     common.define("GGML_SHARED", None);
     common.define("GGML_BUILD", None);
@@ -195,13 +217,8 @@ fn lib_llama(lib_path: &Path, ggml_objects: Vec<PathBuf>) {
     let mut cpp = common;
 
     cpp.cpp(true).std("c++17");
-    for ggml_obj in ggml_objects {
-        cpp.object(ggml_obj);
-    }
-
-    for cpp_file in cpp_files {
-        cpp.file(src_path.join(cpp_file));
-    }
+    cpp.objects(ggml_objects);
+    cpp.files(cpp_files.into_iter().map(|f| src_path.join(f)));
 
     cpp.compile("llama");
 }
