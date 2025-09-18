@@ -1,8 +1,9 @@
 use llmup_llama_cpp_sys;
 
 use llmup_llama_cpp_sys::llama;
-use std::os::raw::c_char;
 use std::path::Path;
+
+use crate::Vocab;
 
 use super::context::Context;
 
@@ -51,45 +52,10 @@ impl Model {
 
         Ok(Context { ptr: ctx })
     }
-
-    pub fn tokenize(&self, bytes: &[u8]) -> Result<Vec<Token>, ()> {
-        let mut out = Vec::with_capacity(bytes.len() + 2);
-
-        let content_len = <i32>::try_from(bytes.len()).unwrap();
-
-        let content = bytes.as_ptr() as *const c_char;
-        let out_ptr = out.as_mut_ptr() as *mut llama::llama_token;
-
-        let n = unsafe {
-            let vocab = llama::llama_model_get_vocab(self.ptr);
-            llama::llama_tokenize(
-                vocab,
-                content,
-                content_len,
-                out_ptr,
-                out.capacity() as i32,
-                false,
-                true,
-            )
-        };
-
-        if n < 0 {
-            return Err(());
-        }
-
-        unsafe {
-            out.set_len(n as usize);
-        }
-        out.shrink_to_fit();
-        Ok(out)
-    }
 }
 
 #[cfg(unix)]
 use std::os::unix::ffi::OsStrExt;
-
-use crate::token::Token;
-use crate::vocab::Vocab;
 
 #[cfg(unix)]
 fn path_to_cpath(path: &Path) -> *const ::std::os::raw::c_char {
