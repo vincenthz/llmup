@@ -2,9 +2,11 @@ use std::{ffi::c_char, ptr::null_mut};
 
 use llmup_llama_cpp_sys::llama;
 
-use crate::token::Token;
+use crate::{Model, token::Token};
 
+#[allow(dead_code)]
 pub struct Vocab {
+    pub(crate) model: Model,
     pub(crate) ptr: *const llama::llama_vocab,
 }
 
@@ -39,7 +41,7 @@ impl Vocab {
                 true,
             )
         };
-        println!("{}", n);
+        //println!("{}", n);
         assert_eq!(n as usize, size);
         unsafe {
             out.set_len(size);
@@ -66,6 +68,10 @@ impl Vocab {
         }
         buf.truncate(n as usize);
         buf
+    }
+
+    pub fn as_string_lossy(&self, token: Token) -> String {
+        String::from_utf8_lossy(&self.as_bytes(token)).to_string()
     }
 
     pub fn as_string(&self, token: Token) -> String {

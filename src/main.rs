@@ -62,7 +62,8 @@ async fn cmd_run(name: String) -> anyhow::Result<()> {
         }
         Ok(line) => {
             let mut tokens = vocab.tokenize(line.as_bytes(), true);
-            context.advance(&mut tokens, &vocab, &sampler);
+            context.append_tokens(&mut tokens);
+            context.advance(&vocab, &sampler);
             Ok(())
         }
     }

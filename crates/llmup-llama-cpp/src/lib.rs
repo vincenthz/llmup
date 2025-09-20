@@ -2,6 +2,7 @@
 
 // NOT MEMORY SAFE YET / it will explode if you look at it side ways.
 
+mod batch;
 mod context;
 mod model;
 mod sampler;

@@ -2,19 +2,24 @@ use llmup_llama_cpp_sys;
 
 use llmup_llama_cpp_sys::llama;
 use std::path::Path;
+use std::ptr::{null, null_mut};
+use std::sync::Arc;
 
 use crate::Vocab;
 
 use super::context::Context;
 
+#[derive(Clone)]
 pub struct Model {
-    ptr: *mut llama::llama_model,
+    pub(crate) ptr: Arc<ModelPtr>,
 }
 
-impl Drop for Model {
+pub struct ModelPtr(pub(crate) *mut llama::llama_model);
+
+impl Drop for ModelPtr {
     fn drop(&mut self) {
         unsafe {
-            llama::llama_free_model(self.ptr);
+            llama::llama_free_model(self.0);
         }
     }
 }
@@ -30,27 +35,38 @@ impl Model {
             return Err(());
         }
 
-        Ok(Model { ptr: ret })
+        Ok(Model {
+            ptr: Arc::new(ModelPtr(ret)),
+        })
     }
 
     pub fn vocab(&self) -> Vocab {
         unsafe {
             Vocab {
-                ptr: llama::llama_model_get_vocab(self.ptr),
+                model: self.clone(),
+                ptr: llama::llama_model_get_vocab(self.ptr.0),
             }
         }
     }
 
-    pub fn new_context(&self) -> Result<Context, ()> {
-        let ctx = unsafe {
-            let context = llama::llama_context_default_params();
-            llama::llama_new_context_with_model(self.ptr, context)
-        };
-        if ctx.is_null() {
-            return Err(());
-        }
+    /// Get the model type
+    pub fn description(&self) -> String {
+        let sz = unsafe { llama::llama_model_desc(self.ptr.0, null_mut(), 0) as usize };
+        let mut buf = vec![0; sz];
+        unsafe { llama::llama_model_desc(self.ptr.0, buf.as_mut_ptr() as *mut i8, sz) };
+        String::from_utf8(buf).unwrap()
+    }
 
-        Ok(Context { ptr: ctx })
+    pub fn has_encoder(&self) -> bool {
+        unsafe { llama::llama_model_has_encoder(self.ptr.0) }
+    }
+
+    pub fn has_decoder(&self) -> bool {
+        unsafe { llama::llama_model_has_decoder(self.ptr.0) }
+    }
+
+    pub fn new_context(&self) -> Result<Context, ()> {
+        Context::new(self.clone())
     }
 }
 
