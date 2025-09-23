@@ -4,12 +4,14 @@
 
 mod batch;
 mod context;
+mod log;
 mod model;
 mod sampler;
 mod token;
 mod vocab;
 
-pub use context::Context;
-pub use model::Model;
+pub use context::{Context, ContextParams};
+pub use log::{LogKey, LogLevel, llama_logging};
+pub use model::{Model, ModelParams};
 pub use sampler::Sampler;
 pub use vocab::Vocab;

@@ -47,10 +47,19 @@ async fn cmd_run(name: String) -> anyhow::Result<()> {
 
     tracing_subscriber::fmt::init();
 
-    let model = llama::Model::load(&path).unwrap();
+    llama::llama_logging(Box::new(|level, key, t| {
+        if ![llama::LogKey::ModelLoader].iter().any(|k| *k == key) {
+            return;
+        }
+        println!("{:5?} | {:?} | {}", level, key, t)
+    }));
+
+    let model_params = llama::ModelParams::default();
+    let model = llama::Model::load(&path, &model_params).unwrap();
     let vocab = model.vocab();
 
-    let mut context = model.new_context().unwrap();
+    let context_params = llama::ContextParams::default();
+    let mut context = model.new_context(&context_params).unwrap();
 
     let sampler = llama::Sampler::new();
 

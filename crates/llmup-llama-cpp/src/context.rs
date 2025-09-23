@@ -6,7 +6,30 @@ use crate::{Model, Sampler, Vocab, batch::Batch, token::Token};
 pub struct Context {
     pub(crate) model: Model,
     pub(crate) tokens: usize,
+    pub(crate) context_params: llama::llama_context_params,
     pub(crate) ptr: *mut llama::llama_context,
+}
+
+pub struct ContextParams {
+    n_ctx: u32,
+}
+
+impl Default for ContextParams {
+    fn default() -> Self {
+        let mut context = unsafe { llama::llama_context_default_params() };
+        context.n_ctx = 16384;
+        Self {
+            n_ctx: context.n_ctx,
+        }
+    }
+}
+
+impl ContextParams {
+    fn as_c(&self) -> llama::llama_context_params {
+        let mut context = unsafe { llama::llama_context_default_params() };
+        context.n_ctx = self.n_ctx;
+        context
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -14,16 +37,15 @@ pub enum DecodeError {
     CannotFindKVSlot,
     Aborted,
     InvalidBatch,
-    UnspecifiedWarning(i32),
-    FatalError(i32),
+    UnspecifiedWarning(#[allow(dead_code)] i32),
+    FatalError(#[allow(dead_code)] i32),
 }
 
 impl Context {
-    pub fn new(model: Model) -> Result<Self, ()> {
-        let ctx = unsafe {
-            let context = llama::llama_context_default_params();
-            llama::llama_new_context_with_model(model.ptr.0, context)
-        };
+    pub fn new(model: Model, params: &ContextParams) -> Result<Self, ()> {
+        let c_params = params.as_c();
+        let c_params_clone = params.as_c();
+        let ctx = unsafe { llama::llama_new_context_with_model(model.ptr.0, c_params) };
         if ctx.is_null() {
             return Err(());
         }
@@ -31,6 +53,7 @@ impl Context {
         Ok(Self {
             model,
             tokens: 0,
+            context_params: c_params_clone,
             ptr: ctx,
         })
     }
@@ -117,7 +140,7 @@ impl Context {
                     Err(DecodeError::CannotFindKVSlot) => {
                         //cleared.push(self.tokens);
                         //print!(" ------ ");
-                        self.memory_clear(false);
+                        //self.memory_clear(false);
                     }
                     Err(e) => {
                         panic!("decode error {:?}", e)
@@ -125,6 +148,9 @@ impl Context {
                 }
             }
             self.tokens += 1;
+            if self.tokens >= 1024 {
+                break;
+            }
 
             batch.clear();
         }

@@ -2,10 +2,11 @@ use llmup_llama_cpp_sys;
 
 use llmup_llama_cpp_sys::llama;
 use std::path::Path;
-use std::ptr::{null, null_mut};
+use std::ptr::null_mut;
 use std::sync::Arc;
 
 use crate::Vocab;
+use crate::context::ContextParams;
 
 use super::context::Context;
 
@@ -24,13 +25,25 @@ impl Drop for ModelPtr {
     }
 }
 
+#[derive(Default)]
+pub struct ModelParams {
+    pub vocab_only: bool,
+}
+
+impl ModelParams {
+    fn as_c(&self) -> llama::llama_model_params {
+        let mut params = unsafe { llama::llama_model_default_params() };
+
+        params.vocab_only = self.vocab_only;
+        params
+    }
+}
+
 impl Model {
-    pub fn load(path: impl AsRef<Path>) -> Result<Self, ()> {
+    pub fn load(path: impl AsRef<Path>, params: &ModelParams) -> Result<Self, ()> {
         let path = path.as_ref();
-        let ret = unsafe {
-            let params = llama::llama_model_default_params();
-            llama::llama_load_model_from_file(path_to_cpath(path), params)
-        };
+        let c_params = params.as_c();
+        let ret = unsafe { llama::llama_load_model_from_file(path_to_cpath(path), c_params) };
         if ret.is_null() {
             return Err(());
         }
@@ -65,8 +78,9 @@ impl Model {
         unsafe { llama::llama_model_has_decoder(self.ptr.0) }
     }
 
-    pub fn new_context(&self) -> Result<Context, ()> {
-        Context::new(self.clone())
+    /// Create a new context for this model
+    pub fn new_context(&self, params: &ContextParams) -> Result<Context, ()> {
+        Context::new(self.clone(), params)
     }
 }
 
