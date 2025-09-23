@@ -38,4 +38,9 @@ pub enum Commands {
         /// The name of the model to run
         name: String,
     },
+    /// Bench model generation
+    Bench {
+        /// The name of the model to run
+        name: String,
+    },
 }

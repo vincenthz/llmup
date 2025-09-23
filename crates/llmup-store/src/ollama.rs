@@ -232,6 +232,27 @@ impl OllamaStore {
             .with_extension(".tmp")
     }
 
+    pub fn blob_read(&self, blob: &Blob) -> std::io::Result<Vec<u8>> {
+        let path = self.blob_path(blob);
+        let mut file = std::fs::File::open(path)?;
+        let mut out = Vec::new();
+        file.read_to_end(&mut out)?;
+        Ok(out)
+    }
+
+    pub fn blob_read_string(&self, blob: &Blob) -> std::io::Result<String> {
+        let path = self.blob_path(blob);
+        let mut file = std::fs::File::open(path)?;
+        let mut out = Vec::new();
+        file.read_to_end(&mut out)?;
+        String::from_utf8(out).map_err(|e| {
+            std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("utf8 error reading blob {}", e),
+            )
+        })
+    }
+
     pub fn list_registries(&self) -> std::io::Result<Vec<Registry>> {
         let mut regs = Vec::new();
         let dir = std::fs::read_dir(self.manifests_path())?;

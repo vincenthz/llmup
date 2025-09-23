@@ -10,6 +10,8 @@ pub struct Context {
     pub(crate) ptr: *mut llama::llama_context,
 }
 
+unsafe impl Send for Context {}
+
 pub struct ContextParams {
     n_ctx: u32,
 }
@@ -99,62 +101,8 @@ impl Context {
         self.decode(&batch).unwrap();
     }
 
-    pub fn advance(&mut self, vocab: &Vocab, sampler: &Sampler) {
-        const DEBUG: bool = false;
-        let mut batch = Batch::new(1, 0, 1);
-        //let mut cleared = Vec::new();
-        loop {
-            let new_token = sampler.sample(self);
-
-            if vocab.is_eog(new_token) {
-                break;
-            }
-
-            let bytes = vocab.as_bytes(new_token);
-            match str::from_utf8(&bytes) {
-                Ok(s) => {
-                    if DEBUG {
-                        println!("token[{}] : {} ", self.tokens, s);
-                    } else {
-                        print!("{}", s);
-                    }
-                }
-                Err(e) => {
-                    if DEBUG {
-                        println!("token[{}] : UTF8-Err {} : {:?}", self.tokens, e, bytes);
-                    } else {
-                    }
-                }
-            }
-            use std::io::Write;
-            std::io::stdout().flush().unwrap();
-
-            batch.append(new_token, self.tokens, &[0], true);
-            //println!("  batch {:?}", batch);
-
-            loop {
-                match self.decode(&batch) {
-                    Ok(_) => {
-                        break;
-                    }
-                    Err(DecodeError::CannotFindKVSlot) => {
-                        //cleared.push(self.tokens);
-                        //print!(" ------ ");
-                        //self.memory_clear(false);
-                    }
-                    Err(e) => {
-                        panic!("decode error {:?}", e)
-                    }
-                }
-            }
-            self.tokens += 1;
-            if self.tokens >= 1024 {
-                break;
-            }
-
-            batch.clear();
-        }
-
-        //println!("cleared: {:?}", cleared)
+    pub fn next_token(&mut self, sampler: &Sampler, vocab: &Vocab) -> Option<Token> {
+        let new_token = sampler.sample(self);
+        (!vocab.is_eog(new_token)).then_some(new_token)
     }
 }

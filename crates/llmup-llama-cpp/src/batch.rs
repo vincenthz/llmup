@@ -79,6 +79,7 @@ impl Batch {
         }
     }
 
+    #[allow(dead_code)]
     pub fn clear(&mut self) {
         if self.batch.n_tokens == 0 {
             return;

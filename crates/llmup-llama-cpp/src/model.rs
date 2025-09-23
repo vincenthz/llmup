@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crate::Vocab;
 use crate::context::ContextParams;
+use crate::vocab::VocabPtr;
 
 use super::context::Context;
 
@@ -57,7 +58,7 @@ impl Model {
         unsafe {
             Vocab {
                 model: self.clone(),
-                ptr: llama::llama_model_get_vocab(self.ptr.0),
+                ptr: Arc::new(VocabPtr(llama::llama_model_get_vocab(self.ptr.0))),
             }
         }
     }

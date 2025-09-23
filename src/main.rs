@@ -1,8 +1,11 @@
 use std::{
+    path::PathBuf,
     str::FromStr,
+    sync::atomic::AtomicBool,
     time::{Duration, SystemTime},
 };
 
+use anyhow::Context;
 use clap::Parser;
 use llmup_download::ollama::OllamaConfig;
 use llmup_store::ollama::{Model, OllamaStore, Registry, Variant};
@@ -27,41 +30,43 @@ async fn main() -> anyhow::Result<()> {
         args::Commands::Remove { name } => cmd_remove(name).await,
         args::Commands::Verify { blobs } => cmd_verify(blobs).await,
         args::Commands::Run { name } => cmd_run(name).await,
+        args::Commands::Bench { name } => cmd_bench(name).await,
     }
 }
 
-async fn cmd_run(name: String) -> anyhow::Result<()> {
-    let (model, variant) = parse_name(&name)?;
+async fn cmd_bench(name: String) -> anyhow::Result<()> {
+    let OllamaRun {
+        model_path,
+        template: _,
+    } = ollama_model_prepare_run(&name)?;
 
-    let store = llmup_store::ollama::OllamaStore::default();
-    let registry = Registry::from_str(&OllamaConfig::default().host()).unwrap();
-
-    let manifest = store.get_manifest(&registry, &model, &variant)?;
-
-    let Some(model_layer) = manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_MODEL)
-    else {
-        anyhow::bail!("no model found in {}", name);
-    };
-
-    let path = store.blob_path(&model_layer.digest);
-
-    tracing_subscriber::fmt::init();
-
-    llama::llama_logging(Box::new(|level, key, t| {
-        if ![llama::LogKey::ModelLoader].iter().any(|k| *k == key) {
-            return;
-        }
-        println!("{:5?} | {:?} | {}", level, key, t)
-    }));
+    llama_init_logging();
 
     let model_params = llama::ModelParams::default();
-    let model = llama::Model::load(&path, &model_params).unwrap();
+    let model = llama::Model::load(&model_path, &model_params).unwrap();
     let vocab = model.vocab();
 
     let context_params = llama::ContextParams::default();
     let mut context = model.new_context(&context_params).unwrap();
 
-    let sampler = llama::Sampler::new();
+    Ok(())
+}
+
+async fn cmd_run(name: String) -> anyhow::Result<()> {
+    let OllamaRun {
+        model_path,
+        template: _,
+    } = ollama_model_prepare_run(&name)?;
+    tracing_subscriber::fmt::init();
+
+    llama_init_logging();
+
+    let model_params = llama::ModelParams::default();
+    let model = llama::Model::load(&model_path, &model_params).unwrap();
+    let vocab = model.vocab();
+
+    let context_params = llama::ContextParams::default();
+    let mut context = model.new_context(&context_params).unwrap();
 
     let mut rl = rustyline::DefaultEditor::new()?;
     let readline = rl.readline(">> ");
@@ -72,7 +77,68 @@ async fn cmd_run(name: String) -> anyhow::Result<()> {
         Ok(line) => {
             let mut tokens = vocab.tokenize(line.as_bytes(), true);
             context.append_tokens(&mut tokens);
-            context.advance(&vocab, &sampler);
+
+            let (send1, recv1) = std::sync::mpsc::channel();
+            let (send2, recv2) = std::sync::mpsc::channel();
+
+            enum Command {
+                Stop,
+                Next,
+            }
+
+            let vocab_inner = model.vocab();
+            let generator_thread = std::thread::spawn(move || {
+                let sampler = llama::Sampler::new();
+                let vocab = vocab_inner;
+                loop {
+                    let cmd = recv1.recv().unwrap();
+                    match cmd {
+                        Command::Stop => {
+                            send2.send(None).unwrap();
+                            break;
+                        }
+                        Command::Next => {
+                            let n = context.next_token(&sampler, &vocab);
+                            send2.send(n).unwrap();
+                            match n {
+                                None => break,
+                                Some(t) => context.append_tokens(&[t]),
+                            }
+                        }
+                    }
+                }
+            });
+
+            let quit_requested = std::sync::Arc::new(AtomicBool::new(false));
+            let quit_requested_2 = quit_requested.clone();
+            let send1_clone = send1.clone();
+            ctrlc::set_handler(move || {
+                quit_requested_2.store(true, std::sync::atomic::Ordering::Relaxed);
+                send1_clone.send(Command::Stop).unwrap();
+            })
+            .expect("Error setting Ctrl-C handler");
+
+            let mut out = Vec::new();
+            while !quit_requested.load(std::sync::atomic::Ordering::Relaxed) {
+                send1.send(Command::Next).unwrap();
+                match recv2.recv().unwrap() {
+                    None => break,
+                    Some(t) => {
+                        out.push(t);
+                        let bytes = vocab.as_bytes(t);
+                        match str::from_utf8(&bytes) {
+                            Ok(s) => {
+                                print!("{}", s);
+                            }
+                            Err(_e) => {}
+                        }
+                        use std::io::Write;
+                        std::io::stdout().flush().unwrap();
+                    }
+                }
+            }
+
+            generator_thread.join().unwrap();
             Ok(())
         }
     }
@@ -209,4 +275,53 @@ fn parse_name(name: &str) -> anyhow::Result<(Model, Variant)> {
     let variant =
         Variant::from_str(variant_name).map_err(|_| anyhow::anyhow!("invalid variant name"))?;
     Ok((model, variant))
+}
+
+pub struct OllamaRun {
+    model_path: PathBuf,
+    template: gtmpl::Template,
+}
+
+fn ollama_model_prepare_run(name: &str) -> anyhow::Result<OllamaRun> {
+    let (model, variant) = parse_name(&name)?;
+
+    let store = llmup_store::ollama::OllamaStore::default();
+    let registry = Registry::from_str(&OllamaConfig::default().host()).unwrap();
+
+    let manifest = store.get_manifest(&registry, &model, &variant)?;
+
+    let Some(model_layer) = manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_MODEL)
+    else {
+        anyhow::bail!("no model found in {}", name);
+    };
+
+    let Some(template_layer) =
+        manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_TEMPLATE)
+    else {
+        anyhow::bail!("no template found in {}", name);
+    };
+    let template_data = store.blob_read_string(&template_layer.digest)?;
+
+    println!("== template layer");
+    println!("{}", template_data);
+
+    let mut template = gtmpl::Template::default();
+    template
+        .parse(&template_data)
+        .with_context(|| "parsing ollama template string")?;
+
+    let path = store.blob_path(&model_layer.digest);
+    Ok(OllamaRun {
+        model_path: path,
+        template,
+    })
+}
+
+fn llama_init_logging() {
+    llama::llama_logging(Box::new(|level, key, t| {
+        if ![llama::LogKey::ModelLoader].iter().any(|k| *k == key) {
+            return;
+        }
+        println!("{:5?} | {:?} | {}", level, key, t)
+    }));
 }

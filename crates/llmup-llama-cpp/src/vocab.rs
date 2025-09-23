@@ -1,14 +1,20 @@
-use std::{ffi::c_char, ptr::null_mut};
+use std::{ffi::c_char, ptr::null_mut, sync::Arc};
 
 use llmup_llama_cpp_sys::llama;
 
 use crate::{Model, token::Token};
 
+#[derive(Clone)]
 #[allow(dead_code)]
 pub struct Vocab {
     pub(crate) model: Model,
-    pub(crate) ptr: *const llama::llama_vocab,
+    pub(crate) ptr: Arc<VocabPtr>,
 }
+
+unsafe impl Send for Vocab {}
+unsafe impl Sync for Vocab {}
+
+pub struct VocabPtr(pub(crate) *const llama::llama_vocab);
 
 impl Vocab {
     pub fn tokenize_size(&self, bytes: &[u8], first: bool) -> usize {
@@ -16,7 +22,7 @@ impl Vocab {
         let content = bytes.as_ptr() as *const c_char;
 
         unsafe {
-            -llama::llama_tokenize(self.ptr, content, content_len, null_mut(), 0, first, true)
+            -llama::llama_tokenize(self.ptr.0, content, content_len, null_mut(), 0, first, true)
                 as usize
         }
     }
@@ -32,7 +38,7 @@ impl Vocab {
 
         let n = unsafe {
             llama::llama_tokenize(
-                self.ptr,
+                self.ptr.0,
                 content,
                 content_len,
                 out_ptr,
@@ -54,7 +60,7 @@ impl Vocab {
         let buf_ptr = buf.as_mut_ptr();
         let n = unsafe {
             llama::llama_token_to_piece(
-                self.ptr,
+                self.ptr.0,
                 token.0,
                 buf_ptr as *mut c_char,
                 buf.len() as i32,
@@ -79,6 +85,6 @@ impl Vocab {
     }
 
     pub fn is_eog(&self, token: Token) -> bool {
-        unsafe { llama::llama_vocab_is_eog(self.ptr, token.0) }
+        unsafe { llama::llama_vocab_is_eog(self.ptr.0, token.0) }
     }
 }
