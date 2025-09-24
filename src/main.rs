@@ -78,67 +78,53 @@ async fn cmd_run(name: String) -> anyhow::Result<()> {
             let mut tokens = vocab.tokenize(line.as_bytes(), true);
             context.append_tokens(&mut tokens);
 
-            let (send1, recv1) = std::sync::mpsc::channel();
-            let (send2, recv2) = std::sync::mpsc::channel();
-
-            enum Command {
-                Stop,
-                Next,
-            }
-
-            let vocab_inner = model.vocab();
-            let generator_thread = std::thread::spawn(move || {
-                let sampler = llama::Sampler::new();
-                let vocab = vocab_inner;
-                loop {
-                    let cmd = recv1.recv().unwrap();
-                    match cmd {
-                        Command::Stop => {
-                            send2.send(None).unwrap();
-                            break;
-                        }
-                        Command::Next => {
-                            let n = context.next_token(&sampler, &vocab);
-                            send2.send(n).unwrap();
-                            match n {
-                                None => break,
-                                Some(t) => context.append_tokens(&[t]),
-                            }
-                        }
-                    }
-                }
-            });
+            let sampler = llama::Sampler::new();
 
             let quit_requested = std::sync::Arc::new(AtomicBool::new(false));
             let quit_requested_2 = quit_requested.clone();
-            let send1_clone = send1.clone();
             ctrlc::set_handler(move || {
                 quit_requested_2.store(true, std::sync::atomic::Ordering::Relaxed);
-                send1_clone.send(Command::Stop).unwrap();
             })
             .expect("Error setting Ctrl-C handler");
 
-            let mut out = Vec::new();
-            while !quit_requested.load(std::sync::atomic::Ordering::Relaxed) {
-                send1.send(Command::Next).unwrap();
-                match recv2.recv().unwrap() {
-                    None => break,
-                    Some(t) => {
-                        out.push(t);
-                        let bytes = vocab.as_bytes(t);
-                        match str::from_utf8(&bytes) {
-                            Ok(s) => {
-                                print!("{}", s);
-                            }
-                            Err(_e) => {}
+            pub struct Output {
+                utf8_errors: usize,
+            }
+
+            impl Output {
+                pub fn new() -> Self {
+                    Self { utf8_errors: 0 }
+                }
+
+                pub fn append(&mut self, bytes: &[u8]) {
+                    match std::str::from_utf8(bytes) {
+                        Ok(valid) => {
+                            print!("{}", valid);
+                            use std::io::Write;
+                            std::io::stdout().flush().unwrap();
                         }
-                        use std::io::Write;
-                        std::io::stdout().flush().unwrap();
+                        Err(_) => {
+                            self.utf8_errors += 1;
+                        }
                     }
                 }
             }
 
-            generator_thread.join().unwrap();
+            let mut output = Output::new();
+            let mut tokens = Vec::new();
+            while !quit_requested.load(std::sync::atomic::Ordering::Relaxed) {
+                let n = context.next_token(&sampler, &vocab);
+                match n {
+                    None => break,
+                    Some(t) => {
+                        tokens.push(t);
+                        context.append_tokens(&[t]);
+                        let bytes = vocab.as_bytes(t);
+                        output.append(&bytes);
+                    }
+                }
+            }
+
             Ok(())
         }
     }
