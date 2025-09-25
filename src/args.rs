@@ -42,5 +42,7 @@ pub enum Commands {
     Bench {
         /// The name of the model to run
         name: String,
+        #[arg(short, long)]
+        max_tokens: Option<u64>,
     },
 }

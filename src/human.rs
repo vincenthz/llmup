@@ -15,6 +15,22 @@ pub fn size_units(bytes: u64) -> String {
     format!("{} {}", out[0], UNITS[0])
 }
 
+pub fn bench_duration_units(dur: Duration) -> String {
+    const TIME_UNITS: [&str; 4] = ["ns", "us", "ms", "s"];
+    let mut out = [0; 3];
+    let seconds = repeated_div_by(&mut out, dur.as_nanos(), &[1000, 1000, 1000]);
+    let [ns, us, ms] = out;
+    if seconds > 0 {
+        format!("{}.{:3} {}", seconds, ms, TIME_UNITS[3])
+    } else if ms > 0 {
+        format!("{}.{:3} {}", ms, us, TIME_UNITS[2])
+    } else if us > 0 {
+        format!("{}.{:3} {}", us, ns, TIME_UNITS[1])
+    } else {
+        format!("{:3} {}", ns, TIME_UNITS[0])
+    }
+}
+
 pub fn duration_units(dur: Duration) -> String {
     const TIME_UNITS: [&str; 7] = [
         "seconds", "minutes", "hours", "days", "weeks", "months", "years",
@@ -65,4 +81,20 @@ where
         rem = rem / *base;
     }
     rem
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_repeated_div() {
+        let mut out = [0, 0, 0];
+        let rem = repeated_div_by(&mut out, 1_234_456_789, &[1000, 1000, 1000]);
+
+        assert_eq!(rem, 1);
+        assert_eq!(out[2], 234);
+        assert_eq!(out[1], 456);
+        assert_eq!(out[0], 789);
+    }
 }

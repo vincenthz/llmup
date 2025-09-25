@@ -16,9 +16,12 @@ use reqwest::ClientBuilder;
 mod args;
 mod human;
 mod progressbar;
+mod run;
 
 use args::Cli;
 use progressbar::ProgressBar;
+
+use crate::human::bench_duration_units;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -30,17 +33,20 @@ async fn main() -> anyhow::Result<()> {
         args::Commands::Remove { name } => cmd_remove(name).await,
         args::Commands::Verify { blobs } => cmd_verify(blobs).await,
         args::Commands::Run { name } => cmd_run(name).await,
-        args::Commands::Bench { name } => cmd_bench(name).await,
+        args::Commands::Bench { name, max_tokens } => cmd_bench(name, max_tokens).await,
     }
 }
 
-async fn cmd_bench(name: String) -> anyhow::Result<()> {
-    let OllamaRun {
+async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> {
+    let (model, variant) = parse_name(&name)?;
+    let run::OllamaRun {
         model_path,
         template: _,
-    } = ollama_model_prepare_run(&name)?;
+    } = run::ollama_model_prepare_run(&model, &variant)?;
 
-    llama_init_logging();
+    let max_tokens = max_tokens.unwrap_or(u64::MAX);
+
+    run::llama_init_logging();
 
     let model_params = llama::ModelParams::default();
     let model = llama::Model::load(&model_path, &model_params).unwrap();
@@ -49,21 +55,69 @@ async fn cmd_bench(name: String) -> anyhow::Result<()> {
     let context_params = llama::ContextParams::default();
     let mut context = model.new_context(&context_params).unwrap();
 
+    const BENCHMARK_CONTEXT: &str = "this is a context for doing tokens benchmarks";
+    let tokens = vocab.tokenize(BENCHMARK_CONTEXT.as_bytes(), true);
+    context.append_tokens(&tokens);
+
+    let sampler = llama::Sampler::new();
+
+    let mut token_generated = 0u64;
+    let start = SystemTime::now();
+    let bar = indicatif::ProgressBar::new_spinner();
+
+    bar.set_style(
+        indicatif::ProgressStyle::with_template(
+            "{pos:>7} tokens generated in {elapsed_precise} ({per_sec})",
+        )
+        .unwrap()
+        .progress_chars("##-"),
+    );
+
+    loop {
+        match context.next_token(&sampler, &vocab) {
+            None => break,
+            Some(t) => {
+                context.append_tokens(&[t]);
+                token_generated += 1;
+                bar.set_position(token_generated);
+                if token_generated >= max_tokens {
+                    break;
+                }
+            }
+        }
+    }
+
+    let end = SystemTime::now();
+    bar.finish();
+
+    let dur = end.duration_since(start).unwrap_or(Duration::ZERO);
+
+    let dur_per_token = dur
+        .checked_div(token_generated as u32)
+        .unwrap_or(Duration::ZERO);
+
+    let tps = token_generated as f64 / dur.as_secs_f64();
+    let time_token = bench_duration_units(dur_per_token);
+    println!("tokens generated   : {}", token_generated);
+    println!("elapsed            : {}", bench_duration_units(dur));
+    println!("tokens per seconds : {:.4}", tps);
+    println!("time per token     : {}", time_token);
+
     Ok(())
 }
 
 async fn cmd_run(name: String) -> anyhow::Result<()> {
-    let OllamaRun {
+    let (model, variant) = parse_name(&name)?;
+    let run::OllamaRun {
         model_path,
         template: _,
-    } = ollama_model_prepare_run(&name)?;
-    tracing_subscriber::fmt::init();
+    } = run::ollama_model_prepare_run(&model, &variant)?;
 
-    llama_init_logging();
+    tracing_subscriber::fmt::init();
+    run::llama_init_logging();
 
     let model_params = llama::ModelParams::default();
     let model = llama::Model::load(&model_path, &model_params).unwrap();
-    let vocab = model.vocab();
 
     let context_params = llama::ContextParams::default();
     let mut context = model.new_context(&context_params).unwrap();
@@ -75,56 +129,7 @@ async fn cmd_run(name: String) -> anyhow::Result<()> {
             anyhow::bail!("error {:?}", e);
         }
         Ok(line) => {
-            let mut tokens = vocab.tokenize(line.as_bytes(), true);
-            context.append_tokens(&mut tokens);
-
-            let sampler = llama::Sampler::new();
-
-            let quit_requested = std::sync::Arc::new(AtomicBool::new(false));
-            let quit_requested_2 = quit_requested.clone();
-            ctrlc::set_handler(move || {
-                quit_requested_2.store(true, std::sync::atomic::Ordering::Relaxed);
-            })
-            .expect("Error setting Ctrl-C handler");
-
-            pub struct Output {
-                utf8_errors: usize,
-            }
-
-            impl Output {
-                pub fn new() -> Self {
-                    Self { utf8_errors: 0 }
-                }
-
-                pub fn append(&mut self, bytes: &[u8]) {
-                    match std::str::from_utf8(bytes) {
-                        Ok(valid) => {
-                            print!("{}", valid);
-                            use std::io::Write;
-                            std::io::stdout().flush().unwrap();
-                        }
-                        Err(_) => {
-                            self.utf8_errors += 1;
-                        }
-                    }
-                }
-            }
-
-            let mut output = Output::new();
-            let mut tokens = Vec::new();
-            while !quit_requested.load(std::sync::atomic::Ordering::Relaxed) {
-                let n = context.next_token(&sampler, &vocab);
-                match n {
-                    None => break,
-                    Some(t) => {
-                        tokens.push(t);
-                        context.append_tokens(&[t]);
-                        let bytes = vocab.as_bytes(t);
-                        output.append(&bytes);
-                    }
-                }
-            }
-
+            run::llama_run(&mut context, &line)?;
             Ok(())
         }
     }
@@ -261,53 +266,4 @@ fn parse_name(name: &str) -> anyhow::Result<(Model, Variant)> {
     let variant =
         Variant::from_str(variant_name).map_err(|_| anyhow::anyhow!("invalid variant name"))?;
     Ok((model, variant))
-}
-
-pub struct OllamaRun {
-    model_path: PathBuf,
-    template: gtmpl::Template,
-}
-
-fn ollama_model_prepare_run(name: &str) -> anyhow::Result<OllamaRun> {
-    let (model, variant) = parse_name(&name)?;
-
-    let store = llmup_store::ollama::OllamaStore::default();
-    let registry = Registry::from_str(&OllamaConfig::default().host()).unwrap();
-
-    let manifest = store.get_manifest(&registry, &model, &variant)?;
-
-    let Some(model_layer) = manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_MODEL)
-    else {
-        anyhow::bail!("no model found in {}", name);
-    };
-
-    let Some(template_layer) =
-        manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_TEMPLATE)
-    else {
-        anyhow::bail!("no template found in {}", name);
-    };
-    let template_data = store.blob_read_string(&template_layer.digest)?;
-
-    println!("== template layer");
-    println!("{}", template_data);
-
-    let mut template = gtmpl::Template::default();
-    template
-        .parse(&template_data)
-        .with_context(|| "parsing ollama template string")?;
-
-    let path = store.blob_path(&model_layer.digest);
-    Ok(OllamaRun {
-        model_path: path,
-        template,
-    })
-}
-
-fn llama_init_logging() {
-    llama::llama_logging(Box::new(|level, key, t| {
-        if ![llama::LogKey::ModelLoader].iter().any(|k| *k == key) {
-            return;
-        }
-        println!("{:5?} | {:?} | {}", level, key, t)
-    }));
 }

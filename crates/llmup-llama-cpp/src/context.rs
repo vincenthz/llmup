@@ -60,6 +60,10 @@ impl Context {
         })
     }
 
+    pub fn model(&self) -> &Model {
+        &self.model
+    }
+
     pub fn state_get(&self) -> Vec<u8> {
         let state_size = unsafe { llama::llama_state_get_size(self.ptr) };
 

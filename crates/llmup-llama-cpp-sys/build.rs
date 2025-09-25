@@ -9,6 +9,7 @@ use cc::Build;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Backend {
     Cpu,
+    Metal,
 }
 
 const WARNING_FLAGS: &[&str] = &[
@@ -145,6 +146,34 @@ fn lib_ggml(lib_path: &Path) -> Vec<PathBuf> {
             ];
 
             c.files(c_files.into_iter().map(|f| backend_dir.join(f)));
+            cpp.files(cpp_files.into_iter().map(|f| backend_dir.join(f)));
+        }
+        Backend::Metal => {
+            let backend_dir = src_path.join("ggml-metal");
+            c.include(&backend_dir);
+            cpp.include(&backend_dir);
+
+            let cpp_files = [
+                "ggml-metal.cpp",
+                "ggml-metal-device.cpp",
+                "ggml-metal-common.cpp",
+                "ggml-metal-ops.cpp",
+            ];
+
+            pub enum CreateCommand<'a> {
+                Line(&'a str),
+            }
+            fn create_file<'a>(command: &[CreateCommand<'a>]) {}
+
+            create_file(&[
+                CreateCommand::Line(".section __DATA,__ggml_metallib"),
+                CreateCommand::Line(".globl _ggml_metallib_start"),
+                CreateCommand::Line("_ggml_metallib_start:"),
+                //Line(&format!(".incbin "\"{}\"", METALLIB_SOURCE_EMBED),
+                CreateCommand::Line(".globl _ggml_metallib_end"),
+                CreateCommand::Line("_ggml_metallib_end:"),
+            ]);
+
             cpp.files(cpp_files.into_iter().map(|f| backend_dir.join(f)));
         }
     }
