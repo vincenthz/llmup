@@ -100,7 +100,13 @@ pub fn ollama_model_prepare_run(
     println!("== template layer");
     println!("{}", template_data);
 
+    fn gtmpl_fn_slice(values: &[gtmpl::Value]) -> Result<gtmpl::Value, gtmpl::FuncError> {
+        println!("slice: {:?}", values);
+        todo!()
+    }
+
     let mut template = gtmpl::Template::default();
+    template.add_func("slice", gtmpl_fn_slice);
     template
         .parse(&template_data)
         .with_context(|| "parsing ollama template string")?;

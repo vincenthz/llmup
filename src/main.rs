@@ -98,6 +98,8 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
 
     let tps = token_generated as f64 / dur.as_secs_f64();
     let time_token = bench_duration_units(dur_per_token);
+
+    println!("model              : {}", name);
     println!("tokens generated   : {}", token_generated);
     println!("elapsed            : {}", bench_duration_units(dur));
     println!("tokens per seconds : {:.4}", tps);
