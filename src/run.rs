@@ -31,9 +31,11 @@ impl Output {
 
 pub fn llama_init_logging() {
     llama::llama_logging(Box::new(|level, key, t| {
+        /*
         if ![llama::LogKey::ModelLoader].iter().any(|k| *k == key) {
             return;
         }
+        */
         println!("{:5?} | {:?} | {}", level, key, t)
     }));
 }
