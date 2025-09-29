@@ -107,8 +107,14 @@ pub fn ollama_model_prepare_run(
         todo!()
     }
 
+    fn gtmpl_fn_current_date(values: &[gtmpl::Value]) -> Result<gtmpl::Value, gtmpl::FuncError> {
+        println!("currentDate: {:?}", values);
+        todo!()
+    }
+
     let mut template = gtmpl::Template::default();
     template.add_func("slice", gtmpl_fn_slice);
+    template.add_func("currentDate", gtmpl_fn_current_date);
     template
         .parse(&template_data)
         .with_context(|| "parsing ollama template string")?;
