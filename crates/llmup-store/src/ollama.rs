@@ -229,7 +229,7 @@ impl OllamaStore {
     pub fn blob_path_tmp(&self, blob: &Blob) -> PathBuf {
         self.blobs_path()
             .join(&blob.as_path_name())
-            .with_extension(".tmp")
+            .with_extension("tmp")
     }
 
     pub fn blob_read(&self, blob: &Blob) -> std::io::Result<Vec<u8>> {

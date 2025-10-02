@@ -36,7 +36,12 @@ pub fn llama_init_logging() {
             return;
         }
         */
-        println!("{:5?} | {:?} | {}", level, key, t)
+        println!(
+            "{:<5} | {:<22} | {}",
+            format!("{}", level),
+            format!("{:?}", key),
+            t
+        )
     }));
 }
 

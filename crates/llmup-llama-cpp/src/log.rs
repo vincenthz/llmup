@@ -11,12 +11,16 @@ pub enum LogKey {
     ModelLoader,
     CreateTensor,
     CreateMemory,
+    GgufInitFile,
     Load,
     LoadTensors,
+    ModelLoad,
     PrintInfo,
     SetAbortCallback,
     RegisterBackend,
     RegisterDevice,
+    GgmlMetalDeviceInit,
+    GgmlMetalLibraryInit,
     Unknown,
 }
 
@@ -41,6 +45,12 @@ impl std::fmt::Debug for LogLevel {
     }
 }
 
+impl std::fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Self as std::fmt::Debug>::fmt(self, f)
+    }
+}
+
 impl From<llama::ggml_log_level> for LogLevel {
     fn from(value: llama::ggml_log_level) -> Self {
         match value {
@@ -61,6 +71,9 @@ impl<'a> From<&'a str> for LogKey {
             "llama_kv_cache" => LogKey::KvCache,
             "llama_context" => LogKey::Context,
             "llama_model_loader" => LogKey::ModelLoader,
+            "llama_model_load" => LogKey::ModelLoad,
+            "llama_model_load_from_file_impl" => LogKey::ModelLoad,
+            "gguf_init_from_file_impl" => LogKey::GgufInitFile,
             "set_abort_callback" => LogKey::SetAbortCallback,
             "load" => LogKey::Load,
             "print_info" => LogKey::PrintInfo,
@@ -70,7 +83,12 @@ impl<'a> From<&'a str> for LogKey {
             "create_memory" => LogKey::CreateMemory,
             "register_backend" => LogKey::RegisterBackend,
             "register_device" => LogKey::RegisterDevice,
-            _ => LogKey::Unknown,
+            "ggml_metal_device_init" => LogKey::GgmlMetalDeviceInit,
+            "ggml_metal_library_init" => LogKey::GgmlMetalLibraryInit,
+            _ => {
+                eprintln!("unknown logkey {}", value);
+                LogKey::Unknown
+            }
         }
     }
 }
