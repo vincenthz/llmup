@@ -1,9 +1,8 @@
-use std::{path::PathBuf, str::FromStr, sync::atomic::AtomicBool};
+use std::sync::atomic::AtomicBool;
 
-use anyhow::Context;
 use llmup_llama_cpp as llama;
 
-use llmup_download::ollama::OllamaConfig;
+use llmup_run::ollama as ollama_run;
 use llmup_store::ollama;
 
 pub struct Output {
@@ -29,13 +28,11 @@ impl Output {
     }
 }
 
-pub fn llama_init_logging() {
-    llama::llama_logging(Box::new(|level, key, t| {
-        /*
-        if ![llama::LogKey::ModelLoader].iter().any(|k| *k == key) {
+pub fn llama_init_logging(debug: bool) {
+    llama::llama_logging(Box::new(move |level, key, t| {
+        if !debug && ![llama::LogKey::ModelLoader].iter().any(|k| *k == key) {
             return;
         }
-        */
         println!(
             "{:<5} | {:<22} | {}",
             format!("{}", level),
@@ -76,59 +73,4 @@ pub fn llama_run(context: &mut llama::Context, line: &str) -> anyhow::Result<()>
         }
     }
     Ok(())
-}
-
-pub struct OllamaRun {
-    pub model_path: PathBuf,
-    pub template: gtmpl::Template,
-}
-
-pub fn ollama_model_prepare_run(
-    model: &ollama::Model,
-    variant: &ollama::Variant,
-) -> anyhow::Result<OllamaRun> {
-    let store = llmup_store::ollama::OllamaStore::default();
-    let registry = ollama::Registry::from_str(&OllamaConfig::default().host()).unwrap();
-
-    let manifest = store.get_manifest(&registry, &model, &variant)?;
-
-    let Some(model_layer) = manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_MODEL)
-    else {
-        anyhow::bail!("no model found for {:?}:{:?}", model, variant);
-    };
-
-    let Some(template_layer) =
-        manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_TEMPLATE)
-    else {
-        anyhow::bail!("no template found for {:?}:{:?}", model, variant);
-    };
-    let template_data = store.blob_read_string(&template_layer.digest)?;
-
-    println!("== template layer");
-    println!("{}", template_data);
-
-    fn gtmpl_fn_slice(values: &[gtmpl::Value]) -> Result<gtmpl::Value, gtmpl::FuncError> {
-        println!("slice: {:?}", values);
-        todo!()
-    }
-
-    fn gtmpl_fn_current_date(values: &[gtmpl::Value]) -> Result<gtmpl::Value, gtmpl::FuncError> {
-        println!("currentDate: {:?}", values);
-        todo!()
-    }
-
-    let mut template = gtmpl::Template::default();
-    template.add_func("slice", gtmpl_fn_slice);
-    template.add_func("currentDate", gtmpl_fn_current_date);
-    /*
-    template
-        .parse(&template_data)
-        .with_context(|| "parsing ollama template string")?;
-        */
-
-    let path = store.blob_path(&model_layer.digest);
-    Ok(OllamaRun {
-        model_path: path,
-        template,
-    })
 }

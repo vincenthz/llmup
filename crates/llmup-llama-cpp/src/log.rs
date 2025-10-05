@@ -14,6 +14,7 @@ pub enum LogKey {
     GgufInitFile,
     Load,
     LoadTensors,
+    InitTokenizer,
     ModelLoad,
     PrintInfo,
     SetAbortCallback,
@@ -21,6 +22,10 @@ pub enum LogKey {
     RegisterDevice,
     GgmlMetalDeviceInit,
     GgmlMetalLibraryInit,
+    GgmlMetalInit,
+    GgmlMetalLibraryCompilePipeline,
+    GgmlGallocrReserveN,
+    GgmlMetalLogAllocatedSize,
     Unknown,
 }
 
@@ -73,7 +78,9 @@ impl<'a> From<&'a str> for LogKey {
             "llama_model_loader" => LogKey::ModelLoader,
             "llama_model_load" => LogKey::ModelLoad,
             "llama_model_load_from_file_impl" => LogKey::ModelLoad,
+            "init_tokenizer" => LogKey::InitTokenizer,
             "gguf_init_from_file_impl" => LogKey::GgufInitFile,
+            "ggml_gallocr_reserve_n" => LogKey::GgmlGallocrReserveN,
             "set_abort_callback" => LogKey::SetAbortCallback,
             "load" => LogKey::Load,
             "print_info" => LogKey::PrintInfo,
@@ -85,6 +92,9 @@ impl<'a> From<&'a str> for LogKey {
             "register_device" => LogKey::RegisterDevice,
             "ggml_metal_device_init" => LogKey::GgmlMetalDeviceInit,
             "ggml_metal_library_init" => LogKey::GgmlMetalLibraryInit,
+            "ggml_metal_init" => LogKey::GgmlMetalInit,
+            "ggml_metal_library_compile_pipeline" => LogKey::GgmlMetalLibraryCompilePipeline,
+            "ggml_metal_log_allocated_size" => LogKey::GgmlMetalLogAllocatedSize,
             _ => {
                 eprintln!("unknown logkey {}", value);
                 LogKey::Unknown

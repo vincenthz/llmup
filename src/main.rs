@@ -8,6 +8,7 @@ use std::{
 use anyhow::Context;
 use clap::Parser;
 use llmup_download::ollama::OllamaConfig;
+use llmup_run::ollama as ollama_run;
 use llmup_store::ollama::{Model, OllamaStore, Registry, Variant};
 
 use llmup_llama_cpp as llama;
@@ -32,28 +33,29 @@ async fn main() -> anyhow::Result<()> {
         args::Commands::Pull { name } => cmd_pull(name).await,
         args::Commands::Remove { name } => cmd_remove(name).await,
         args::Commands::Verify { blobs } => cmd_verify(blobs).await,
-        args::Commands::Run { name } => cmd_run(name).await,
+        args::Commands::Run { name, debug } => cmd_run(name, debug).await,
         args::Commands::Bench { name, max_tokens } => cmd_bench(name, max_tokens).await,
     }
 }
 
 async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> {
     let (model, variant) = parse_name(&name)?;
-    let run::OllamaRun {
+    let ollama_run::OllamaRun {
         model_path,
         template: _,
-    } = run::ollama_model_prepare_run(&model, &variant)?;
+        params: _,
+    } = ollama_run::model_prepare_run(&model, &variant)?;
 
     let max_tokens = max_tokens.unwrap_or(u64::MAX);
 
-    run::llama_init_logging();
+    run::llama_init_logging(false);
 
     let model_params = llama::ModelParams::default();
-    let model = llama::Model::load(&model_path, &model_params).unwrap();
+    let model = llama::Model::load(&model_path, &model_params)?;
     let vocab = model.vocab();
 
     let context_params = llama::ContextParams::default();
-    let mut context = model.new_context(&context_params).unwrap();
+    let mut context = model.new_context(&context_params)?;
 
     const BENCHMARK_CONTEXT: &str = "this is a context for doing tokens benchmarks";
     let tokens = vocab.tokenize(BENCHMARK_CONTEXT.as_bytes(), true);
@@ -108,15 +110,16 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
     Ok(())
 }
 
-async fn cmd_run(name: String) -> anyhow::Result<()> {
+async fn cmd_run(name: String, debug: bool) -> anyhow::Result<()> {
     let (model, variant) = parse_name(&name)?;
-    let run::OllamaRun {
+    let ollama_run::OllamaRun {
         model_path,
         template: _,
-    } = run::ollama_model_prepare_run(&model, &variant)?;
+        params: _,
+    } = ollama_run::model_prepare_run(&model, &variant)?;
 
     tracing_subscriber::fmt::init();
-    run::llama_init_logging();
+    run::llama_init_logging(debug);
 
     let model_params = llama::ModelParams::default();
     let model = llama::Model::load(&model_path, &model_params).unwrap();

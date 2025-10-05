@@ -9,7 +9,7 @@ use crate::Vocab;
 use crate::context::ContextParams;
 use crate::vocab::VocabPtr;
 
-use super::context::Context;
+use super::context::{Context, ContextCreateError};
 
 #[derive(Clone)]
 pub struct Model {
@@ -40,13 +40,24 @@ impl ModelParams {
     }
 }
 
+#[derive(Debug)]
+pub struct ModelLoadError;
+
+impl std::fmt::Display for ModelLoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Model Load Error (consult logging for reasons)")
+    }
+}
+
+impl std::error::Error for ModelLoadError {}
+
 impl Model {
-    pub fn load(path: impl AsRef<Path>, params: &ModelParams) -> Result<Self, ()> {
+    pub fn load(path: impl AsRef<Path>, params: &ModelParams) -> Result<Self, ModelLoadError> {
         let path = path.as_ref();
         let c_params = params.as_c();
         let ret = unsafe { llama::llama_load_model_from_file(path_to_cpath(path), c_params) };
         if ret.is_null() {
-            return Err(());
+            return Err(ModelLoadError);
         }
 
         Ok(Model {
@@ -80,7 +91,7 @@ impl Model {
     }
 
     /// Create a new context for this model
-    pub fn new_context(&self, params: &ContextParams) -> Result<Context, ()> {
+    pub fn new_context(&self, params: &ContextParams) -> Result<Context, ContextCreateError> {
         Context::new(self.clone(), params)
     }
 }

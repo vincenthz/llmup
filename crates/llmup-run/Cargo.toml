@@ -1,0 +1,13 @@
+[package]
+name = "llmup-run"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+llmup-store = { path = "../llmup-store", version = "0.1" }
+llmup-download = { path = "../llmup-download", version = "0.1" }
+gtmpl = "0.7"
+chrono = "*"
+anyhow = "1"
+ctrlc = "3.5"
+serde_json = "1"

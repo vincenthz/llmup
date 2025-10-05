@@ -37,6 +37,9 @@ pub enum Commands {
     Run {
         /// The name of the model to run
         name: String,
+        /// Debug information
+        #[arg(long, default_value_t = false)]
+        debug: bool,
     },
     /// Bench model generation
     Bench {

@@ -43,13 +43,24 @@ pub enum DecodeError {
     FatalError(#[allow(dead_code)] i32),
 }
 
+#[derive(Debug)]
+pub struct ContextCreateError;
+
+impl std::fmt::Display for ContextCreateError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Context Create Error (consult logging for reasons)")
+    }
+}
+
+impl std::error::Error for ContextCreateError {}
+
 impl Context {
-    pub fn new(model: Model, params: &ContextParams) -> Result<Self, ()> {
+    pub fn new(model: Model, params: &ContextParams) -> Result<Self, ContextCreateError> {
         let c_params = params.as_c();
         let c_params_clone = params.as_c();
         let ctx = unsafe { llama::llama_new_context_with_model(model.ptr.0, c_params) };
         if ctx.is_null() {
-            return Err(());
+            return Err(ContextCreateError);
         }
 
         Ok(Self {
