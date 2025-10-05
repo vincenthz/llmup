@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 llmup-llama-cpp-sys = { path = "../llmup-llama-cpp-sys", version = "0.1" }
+thiserror = "2"

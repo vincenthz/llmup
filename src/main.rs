@@ -34,8 +34,60 @@ async fn main() -> anyhow::Result<()> {
         args::Commands::Remove { name } => cmd_remove(name).await,
         args::Commands::Verify { blobs } => cmd_verify(blobs).await,
         args::Commands::Run { name, debug } => cmd_run(name, debug).await,
+        args::Commands::Info { name } => cmd_info(name).await,
         args::Commands::Bench { name, max_tokens } => cmd_bench(name, max_tokens).await,
+        args::Commands::Embed { name } => cmd_embed(name).await,
     }
+}
+
+async fn cmd_info(name: String) -> anyhow::Result<()> {
+    let (model, variant) = parse_name(&name)?;
+    let ollama_run::OllamaRun {
+        model_path,
+        template: _,
+        params: _,
+    } = ollama_run::model_prepare_run(&model, &variant)?;
+
+    println!("model: {}", model_path.display());
+
+    Ok(())
+}
+
+async fn cmd_embed(name: String) -> anyhow::Result<()> {
+    let (model, variant) = parse_name(&name)?;
+    let ollama_run::OllamaRun {
+        model_path,
+        template: _,
+        params: _,
+    } = ollama_run::model_prepare_run(&model, &variant)?;
+
+    run::llama_init_logging(false);
+
+    let model_params = llama::ModelParams::default();
+    let model = llama::Model::load(&model_path, &model_params)?;
+    let vocab = model.vocab();
+
+    let context_params = llama::ContextParams {
+        embeddings: true,
+        ..llama::ContextParams::default()
+    };
+    let mut context = model.new_context(&context_params)?;
+
+    if model.has_encoder() && model.has_decoder() {
+        panic!("cannot generate embeddings in models with encoder-decoder")
+    }
+
+    let pooling_type = context.pooling_type();
+
+    println!("pooling type: {:?}", pooling_type);
+
+    let tokens = vocab.tokenize(b"test", true);
+    context.append_tokens(&tokens)?;
+
+    let e = context.embeddings_seq_ith(0).unwrap();
+    println!("embedding {:?}", e);
+
+    Ok(())
 }
 
 async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> {

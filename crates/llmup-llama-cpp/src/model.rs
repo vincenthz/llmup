@@ -74,6 +74,10 @@ impl Model {
         }
     }
 
+    pub fn n_ctx_train(&self) -> i32 {
+        unsafe { llama::llama_n_ctx_train(self.ptr.0) }
+    }
+
     /// Get the model type
     pub fn description(&self) -> String {
         let sz = unsafe { llama::llama_model_desc(self.ptr.0, null_mut(), 0) as usize };
@@ -88,6 +92,10 @@ impl Model {
 
     pub fn has_decoder(&self) -> bool {
         unsafe { llama::llama_model_has_decoder(self.ptr.0) }
+    }
+
+    pub fn n_embd(&self) -> usize {
+        unsafe { llama::llama_model_n_embd(self.ptr.0) as usize }
     }
 
     /// Create a new context for this model

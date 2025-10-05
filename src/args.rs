@@ -33,6 +33,11 @@ pub enum Commands {
         #[arg(short, long, default_value_t = false)]
         blobs: bool,
     },
+    /// Information about a model
+    Info {
+        /// The name of the model to get info
+        name: String,
+    },
     /// Run a model
     Run {
         /// The name of the model to run
@@ -47,5 +52,10 @@ pub enum Commands {
         name: String,
         #[arg(short, long)]
         max_tokens: Option<u64>,
+    },
+    /// Embedding generation
+    Embed {
+        /// The name of the model to run
+        name: String,
     },
 }

@@ -1,4 +1,5 @@
 use llmup_llama_cpp_sys::llama;
+use thiserror::Error;
 
 use crate::{Model, Sampler, Vocab, batch::Batch, token::Token};
 
@@ -13,7 +14,8 @@ pub struct Context {
 unsafe impl Send for Context {}
 
 pub struct ContextParams {
-    n_ctx: u32,
+    pub n_ctx: u32,
+    pub embeddings: bool,
 }
 
 impl Default for ContextParams {
@@ -22,6 +24,7 @@ impl Default for ContextParams {
         context.n_ctx = 16384;
         Self {
             n_ctx: context.n_ctx,
+            embeddings: context.embeddings,
         }
     }
 }
@@ -30,16 +33,22 @@ impl ContextParams {
     fn as_c(&self) -> llama::llama_context_params {
         let mut context = unsafe { llama::llama_context_default_params() };
         context.n_ctx = self.n_ctx;
+        context.embeddings = self.embeddings;
         context
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Error)]
 pub enum DecodeError {
+    #[error("cannot find KV Slot")]
     CannotFindKVSlot,
+    #[error("Aborted")]
     Aborted,
+    #[error("Invalid Batch")]
     InvalidBatch,
+    #[error("Unspecified Decode Warning {0}")]
     UnspecifiedWarning(#[allow(dead_code)] i32),
+    #[error("Fatal Decode Error {0}")]
     FatalError(#[allow(dead_code)] i32),
 }
 
@@ -53,6 +62,30 @@ impl std::fmt::Display for ContextCreateError {
 }
 
 impl std::error::Error for ContextCreateError {}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PoolingType {
+    Unspecified,
+    None,
+    Mean,
+    Cls,
+    Last,
+    Rank,
+}
+
+impl From<llama::llama_pooling_type> for PoolingType {
+    fn from(value: llama::llama_pooling_type) -> Self {
+        match value {
+            llama::llama_pooling_type::LLAMA_POOLING_TYPE_UNSPECIFIED => Self::Unspecified,
+            llama::llama_pooling_type::LLAMA_POOLING_TYPE_NONE => Self::None,
+            llama::llama_pooling_type::LLAMA_POOLING_TYPE_MEAN => Self::Mean,
+            llama::llama_pooling_type::LLAMA_POOLING_TYPE_CLS => Self::Cls,
+            llama::llama_pooling_type::LLAMA_POOLING_TYPE_LAST => Self::Last,
+            llama::llama_pooling_type::LLAMA_POOLING_TYPE_RANK => Self::Rank,
+            _ => Self::Unspecified,
+        }
+    }
+}
 
 impl Context {
     pub fn new(model: Model, params: &ContextParams) -> Result<Self, ContextCreateError> {
@@ -73,6 +106,18 @@ impl Context {
 
     pub fn model(&self) -> &Model {
         &self.model
+    }
+
+    pub fn n_ctx(&self) -> u32 {
+        unsafe { llama::llama_n_ctx(self.ptr) }
+    }
+
+    pub fn n_batch(&self) -> u32 {
+        unsafe { llama::llama_n_batch(self.ptr) }
+    }
+
+    pub fn n_ubatch(&self) -> u32 {
+        unsafe { llama::llama_n_ubatch(self.ptr) }
     }
 
     pub fn state_get(&self) -> Vec<u8> {
@@ -110,14 +155,33 @@ impl Context {
         }
     }
 
-    pub fn append_tokens(&mut self, tokens: &[Token]) {
+    pub fn append_tokens(&mut self, tokens: &[Token]) -> Result<(), DecodeError> {
         let batch = Batch::from_tokens(tokens, self.tokens);
+        self.decode(&batch)?;
         self.tokens += tokens.len();
-        self.decode(&batch).unwrap();
+        Ok(())
     }
 
     pub fn next_token(&mut self, sampler: &Sampler, vocab: &Vocab) -> Option<Token> {
         let new_token = sampler.sample(self);
         (!vocab.is_eog(new_token)).then_some(new_token)
+    }
+
+    pub fn pooling_type(&self) -> PoolingType {
+        let pooling_type = unsafe { llama::llama_pooling_type(self.ptr) };
+        pooling_type.into()
+    }
+
+    pub fn embeddings_seq_ith(&self, i: i32) -> Result<&[f32], ()> {
+        let n_embd = self.model.n_embd() as usize;
+
+        unsafe {
+            let embedding = llama::llama_get_embeddings_seq(self.ptr, i);
+            if embedding == core::ptr::null_mut() {
+                return Err(());
+            }
+
+            Ok(core::slice::from_raw_parts(embedding, n_embd))
+        }
     }
 }

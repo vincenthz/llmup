@@ -1,6 +1,6 @@
 use std::{ffi::c_char, ptr::null_mut, sync::Arc};
 
-use llmup_llama_cpp_sys::llama;
+use llmup_llama_cpp_sys::llama::{self, llama_vocab_eos};
 
 use crate::{Model, token::Token};
 
@@ -82,6 +82,18 @@ impl Vocab {
 
     pub fn as_string(&self, token: Token) -> String {
         String::from_utf8(self.as_bytes(token)).unwrap()
+    }
+
+    pub fn eos(&self) -> Token {
+        Token(unsafe { llama::llama_vocab_eos(self.ptr.0) })
+    }
+
+    pub fn sep(&self) -> Token {
+        Token(unsafe { llama::llama_vocab_sep(self.ptr.0) })
+    }
+
+    pub fn bos(&self) -> Token {
+        Token(unsafe { llama::llama_vocab_bos(self.ptr.0) })
     }
 
     pub fn is_eog(&self, token: Token) -> bool {
