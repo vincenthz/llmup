@@ -1,9 +1,9 @@
 use llmup_llama_cpp_sys;
 
 use llmup_llama_cpp_sys::llama;
-use std::path::Path;
 use std::ptr::null_mut;
 use std::sync::Arc;
+use std::{ffi::CStr, path::Path};
 
 use crate::Vocab;
 use crate::context::ContextParams;
@@ -101,6 +101,17 @@ impl Model {
     /// Create a new context for this model
     pub fn new_context(&self, params: &ContextParams) -> Result<Context, ContextCreateError> {
         Context::new(self.clone(), params)
+    }
+
+    pub fn chat_template(&self) -> Option<String> {
+        unsafe {
+            let ptr = llama::llama_model_chat_template(self.ptr.0, core::ptr::null());
+            if ptr.is_null() {
+                return None;
+            }
+            let cstr = CStr::from_ptr(ptr);
+            Some(cstr.to_string_lossy().to_string())
+        }
     }
 }
 
