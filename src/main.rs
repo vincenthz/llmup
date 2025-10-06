@@ -50,6 +50,13 @@ async fn cmd_info(name: String) -> anyhow::Result<()> {
 
     println!("model: {}", model_path.display());
 
+    let model_params = llama::ModelParams::default();
+    let model = llama::Model::load(&model_path, &model_params)?;
+
+    if let Some(chat_template) = model.chat_template() {
+        println!("chat-template:\n{}", chat_template)
+    }
+
     Ok(())
 }
 
@@ -85,6 +92,13 @@ async fn cmd_embed(name: String) -> anyhow::Result<()> {
     context.append_tokens(&tokens)?;
 
     let e = context.embeddings_seq_ith(0).unwrap();
+    let s = e.iter().map(|f| f * f).sum::<f32>().sqrt();
+    let norm = if s > 0.0 { 1.0 / s } else { 0.0 };
+    let mut e = e.to_vec();
+
+    for f in e.iter_mut() {
+        *f *= norm;
+    }
     println!("embedding {:?}", e);
 
     Ok(())
