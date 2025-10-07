@@ -1,11 +1,8 @@
 use std::{
-    path::PathBuf,
     str::FromStr,
-    sync::atomic::AtomicBool,
     time::{Duration, SystemTime},
 };
 
-use anyhow::Context;
 use clap::Parser;
 use llmup_download::ollama::OllamaConfig;
 use llmup_run::ollama as ollama_run;
@@ -125,7 +122,7 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
 
     const BENCHMARK_CONTEXT: &str = "this is a context for doing tokens benchmarks";
     let tokens = vocab.tokenize(BENCHMARK_CONTEXT.as_bytes(), true);
-    context.append_tokens(&tokens);
+    context.append_tokens(&tokens)?;
 
     let sampler = llama::Sampler::new();
 
@@ -145,7 +142,7 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
         match context.next_token(&sampler, &vocab) {
             None => break,
             Some(t) => {
-                context.append_tokens(&[t]);
+                context.append_tokens(&[t])?;
                 token_generated += 1;
                 bar.set_position(token_generated);
                 if token_generated >= max_tokens {
@@ -200,6 +197,25 @@ async fn cmd_run(name: String, debug: bool) -> anyhow::Result<()> {
             anyhow::bail!("error {:?}", e);
         }
         Ok(line) => {
+            let line = if let Some(template) = model.chat_template() {
+                //println!("template:\n{}", template);
+                match llmup_run::chat_template(
+                    template,
+                    "you are a chatbot answering question",
+                    &line,
+                ) {
+                    Err(e) => {
+                        eprintln!("rendering chat template failed: {}", e);
+                        line
+                    }
+                    Ok(render) => {
+                        //println!("rendered:\n{}", render);
+                        render
+                    }
+                }
+            } else {
+                line
+            };
             run::llama_run(&mut context, &line)?;
             Ok(())
         }

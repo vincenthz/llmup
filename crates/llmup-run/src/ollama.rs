@@ -1,4 +1,3 @@
-use anyhow::Context;
 use chrono::Local;
 use llmup_download::ollama::OllamaConfig;
 use llmup_store::ollama;

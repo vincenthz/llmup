@@ -47,7 +47,7 @@ pub fn llama_run(context: &mut llama::Context, line: &str) -> anyhow::Result<()>
     let vocab = model.vocab();
 
     let mut tokens = vocab.tokenize(line.as_bytes(), true);
-    context.append_tokens(&mut tokens);
+    context.append_tokens(&mut tokens)?;
 
     let sampler = llama::Sampler::new();
 
@@ -66,7 +66,7 @@ pub fn llama_run(context: &mut llama::Context, line: &str) -> anyhow::Result<()>
             None => break,
             Some(t) => {
                 tokens.push(t);
-                context.append_tokens(&[t]);
+                context.append_tokens(&[t])?;
                 let bytes = vocab.as_bytes(t);
                 output.append(&bytes);
             }

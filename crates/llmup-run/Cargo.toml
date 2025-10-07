@@ -11,3 +11,5 @@ chrono = "*"
 anyhow = "1"
 ctrlc = "3.5"
 serde_json = "1"
+minijinja = { version = "2" }
+minijinja-contrib = { version = "2", features = ["pycompat"] }

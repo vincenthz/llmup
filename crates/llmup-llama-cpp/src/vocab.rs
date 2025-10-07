@@ -1,6 +1,6 @@
 use std::{ffi::c_char, ptr::null_mut, sync::Arc};
 
-use llmup_llama_cpp_sys::llama::{self, llama_vocab_eos};
+use llmup_llama_cpp_sys::llama;
 
 use crate::{Model, token::Token};
 

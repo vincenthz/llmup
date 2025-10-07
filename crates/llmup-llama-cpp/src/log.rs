@@ -96,7 +96,7 @@ impl<'a> From<&'a str> for LogKey {
             "ggml_metal_library_compile_pipeline" => LogKey::GgmlMetalLibraryCompilePipeline,
             "ggml_metal_log_allocated_size" => LogKey::GgmlMetalLogAllocatedSize,
             _ => {
-                eprintln!("unknown logkey {}", value);
+                //eprintln!("unknown logkey {}", value);
                 LogKey::Unknown
             }
         }
