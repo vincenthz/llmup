@@ -30,7 +30,9 @@ impl Output {
 
 pub fn llama_init_logging(debug: bool) {
     llama::llama_logging(Box::new(move |level, key, t| {
-        if !debug && ![llama::LogKey::ModelLoader].iter().any(|k| *k == key) {
+        if level != llama::LogLevel::Error
+            && (!debug && ![llama::LogKey::ModelLoader].iter().any(|k| *k == key))
+        {
             return;
         }
         println!(
