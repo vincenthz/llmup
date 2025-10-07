@@ -86,16 +86,9 @@ async fn cmd_embed(name: String) -> anyhow::Result<()> {
     println!("pooling type: {:?}", pooling_type);
 
     let tokens = vocab.tokenize(b"test", true);
-    context.append_tokens(&tokens)?;
 
-    let e = context.embeddings_seq_ith(0).unwrap();
-    let s = e.iter().map(|f| f * f).sum::<f32>().sqrt();
-    let norm = if s > 0.0 { 1.0 / s } else { 0.0 };
-    let mut e = e.to_vec();
+    let e = context.embeddings(&tokens)?;
 
-    for f in e.iter_mut() {
-        *f *= norm;
-    }
     println!("embedding {:?}", e);
 
     Ok(())

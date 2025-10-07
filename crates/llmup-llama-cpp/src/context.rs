@@ -63,6 +63,27 @@ impl std::fmt::Display for ContextCreateError {
 
 impl std::error::Error for ContextCreateError {}
 
+#[derive(Debug, Clone)]
+pub struct EmbeddingSeqError(i32);
+
+impl std::fmt::Display for EmbeddingSeqError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Embedding Sequence Error {}", self.0)
+    }
+}
+
+impl std::error::Error for EmbeddingSeqError {}
+
+#[derive(Debug, Error)]
+pub enum ContextEmbeddingError {
+    #[error("embedding decoding failed: {0}")]
+    DecodeError(#[from] DecodeError),
+    #[error("embedding sequence getting failed: {0}")]
+    EmbeddingSeqError(#[from] EmbeddingSeqError),
+    #[error("pooling type not yet supported: {0:?}")]
+    UnsupportedPoolingType(PoolingType),
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PoolingType {
     Unspecified,
@@ -106,6 +127,25 @@ impl Context {
 
     pub fn model(&self) -> &Model {
         &self.model
+    }
+
+    pub fn embeddings(&mut self, tokens: &[Token]) -> Result<Vec<f32>, ContextEmbeddingError> {
+        let pooling_type = self.pooling_type();
+        if pooling_type != PoolingType::Mean {
+            return Err(ContextEmbeddingError::UnsupportedPoolingType(pooling_type));
+        }
+
+        self.append_tokens(&tokens)?;
+
+        let e = self.embeddings_seq_ith(0)?;
+        let s = e.iter().map(|f| f * f).sum::<f32>().sqrt();
+        let norm = if s > 0.0 { 1.0 / s } else { 0.0 };
+        let mut e = e.to_vec();
+
+        for f in e.iter_mut() {
+            *f *= norm;
+        }
+        Ok(e)
     }
 
     pub fn n_ctx(&self) -> u32 {
@@ -172,13 +212,13 @@ impl Context {
         pooling_type.into()
     }
 
-    pub fn embeddings_seq_ith(&self, i: i32) -> Result<&[f32], ()> {
+    pub fn embeddings_seq_ith(&self, i: i32) -> Result<&[f32], EmbeddingSeqError> {
         let n_embd = self.model.n_embd() as usize;
 
         unsafe {
             let embedding = llama::llama_get_embeddings_seq(self.ptr, i);
             if embedding == core::ptr::null_mut() {
-                return Err(());
+                return Err(EmbeddingSeqError(i));
             }
 
             Ok(core::slice::from_raw_parts(embedding, n_embd))
