@@ -13,5 +13,5 @@ mod vocab;
 pub use context::{Context, ContextParams};
 pub use log::{LogKey, LogLevel, llama_logging};
 pub use model::{Model, ModelParams};
-pub use sampler::Sampler;
+pub use sampler::{Sampler, SamplerChain, SamplerDistance, SamplerMinP, SamplerTemperature};
 pub use vocab::Vocab;

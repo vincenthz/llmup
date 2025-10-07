@@ -202,7 +202,7 @@ impl Context {
         Ok(())
     }
 
-    pub fn next_token(&mut self, sampler: &Sampler, vocab: &Vocab) -> Option<Token> {
+    pub fn next_token<S: Sampler>(&mut self, sampler: &mut S, vocab: &Vocab) -> Option<Token> {
         let new_token = sampler.sample(self);
         (!vocab.is_eog(new_token)).then_some(new_token)
     }

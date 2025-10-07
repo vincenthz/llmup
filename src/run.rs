@@ -51,7 +51,7 @@ pub fn llama_run(context: &mut llama::Context, line: &str) -> anyhow::Result<()>
     let mut tokens = vocab.tokenize(line.as_bytes(), true);
     context.append_tokens(&mut tokens)?;
 
-    let sampler = llama::Sampler::new();
+    let mut sampler = llama::SamplerChain::new();
 
     let quit_requested = std::sync::Arc::new(AtomicBool::new(false));
     let quit_requested_inner = quit_requested.clone();
@@ -63,7 +63,7 @@ pub fn llama_run(context: &mut llama::Context, line: &str) -> anyhow::Result<()>
     let mut output = Output::new();
     let mut tokens = Vec::new();
     while !quit_requested.load(std::sync::atomic::Ordering::Relaxed) {
-        let n = context.next_token(&sampler, &vocab);
+        let n = context.next_token(&mut sampler, &vocab);
         match n {
             None => break,
             Some(t) => {

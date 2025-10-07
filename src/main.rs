@@ -117,7 +117,7 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
     let tokens = vocab.tokenize(BENCHMARK_CONTEXT.as_bytes(), true);
     context.append_tokens(&tokens)?;
 
-    let sampler = llama::Sampler::new();
+    let mut sampler = llama::SamplerChain::new();
 
     let mut token_generated = 0u64;
     let start = SystemTime::now();
@@ -132,7 +132,7 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
     );
 
     loop {
-        match context.next_token(&sampler, &vocab) {
+        match context.next_token(&mut sampler, &vocab) {
             None => break,
             Some(t) => {
                 context.append_tokens(&[t])?;
