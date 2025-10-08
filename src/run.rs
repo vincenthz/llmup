@@ -2,9 +2,6 @@ use std::sync::atomic::AtomicBool;
 
 use llmup_llama_cpp as llama;
 
-use llmup_run::ollama as ollama_run;
-use llmup_store::ollama;
-
 pub struct Output {
     utf8_errors: usize,
 }

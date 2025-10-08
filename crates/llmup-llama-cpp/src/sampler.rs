@@ -95,6 +95,34 @@ impl SamplerDistance {
     }
 }
 
+pub struct SamplerMirostatV1 {
+    ptr: *mut llama::llama_sampler,
+}
+
+impl SamplerMirostatV1 {
+    pub fn new(n_vocab: i32, seed: u32, tau: f32, eta: f32, m: i32) -> Self {
+        unsafe {
+            Self {
+                ptr: llama::llama_sampler_init_mirostat(n_vocab, seed, tau, eta, m),
+            }
+        }
+    }
+}
+
+pub struct SamplerMirostatV2 {
+    ptr: *mut llama::llama_sampler,
+}
+
+impl SamplerMirostatV2 {
+    pub fn new(seed: u32, tau: f32, eta: f32) -> Self {
+        unsafe {
+            Self {
+                ptr: llama::llama_sampler_init_mirostat_v2(seed, tau, eta),
+            }
+        }
+    }
+}
+
 macro_rules! impl_sampler {
     ($name:ident) => {
         impl Drop for $name {
@@ -114,3 +142,5 @@ impl_sampler!(SamplerMinP);
 impl_sampler!(SamplerChain);
 impl_sampler!(SamplerTemperature);
 impl_sampler!(SamplerDistance);
+impl_sampler!(SamplerMirostatV1);
+impl_sampler!(SamplerMirostatV2);

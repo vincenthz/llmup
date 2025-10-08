@@ -23,7 +23,7 @@ impl FromStr for Role {
     }
 }
 
-pub struct Message(String);
+pub struct Message(#[allow(unused)] String);
 pub struct Tool();
 
 pub struct OllamaRunParams {
