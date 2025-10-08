@@ -44,6 +44,15 @@ pub fn llama_init_logging(debug: bool) {
     }));
 }
 
+pub fn llama_sampler() -> impl llama::Sampler {
+    let mut sampler = llama::SamplerChain::new();
+    sampler.add(llama::SamplerMinP::new(0.05, 1));
+    sampler.add(llama::SamplerTemperature::new(0.8));
+    sampler.add(llama::SamplerDistance::new(0xFFFF_FFFF));
+
+    sampler
+}
+
 pub fn llama_run(context: &mut llama::Context, line: &str) -> anyhow::Result<()> {
     let model = context.model();
     let vocab = model.vocab();
@@ -51,7 +60,7 @@ pub fn llama_run(context: &mut llama::Context, line: &str) -> anyhow::Result<()>
     let mut tokens = vocab.tokenize(line.as_bytes(), true);
     context.append_tokens(&mut tokens)?;
 
-    let mut sampler = llama::SamplerChain::new();
+    let mut sampler = llama_sampler();
 
     let quit_requested = std::sync::Arc::new(AtomicBool::new(false));
     let quit_requested_inner = quit_requested.clone();

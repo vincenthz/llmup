@@ -5,10 +5,6 @@ use llmup_llama_cpp_sys::llama;
 use crate::Context;
 use crate::token::Token;
 
-pub struct SamplerChain {
-    pub(crate) ptr: *mut llama::llama_sampler,
-}
-
 pub trait Sampler {
     unsafe fn as_mut(&mut self) -> *mut llama::llama_sampler;
 
@@ -33,9 +29,13 @@ pub trait Sampler {
         }
     }
 
-    fn sample(&mut self, context: &Context) -> Token {
-        Token(unsafe { llama::llama_sampler_sample(self.as_mut(), context.ptr, -1) })
+    fn sample(&mut self, context: &Context, idx: i32) -> Token {
+        Token(unsafe { llama::llama_sampler_sample(self.as_mut(), context.ptr, idx) })
     }
+}
+
+pub struct SamplerChain {
+    pub(crate) ptr: *mut llama::llama_sampler,
 }
 
 impl SamplerChain {
@@ -43,11 +43,13 @@ impl SamplerChain {
         unsafe {
             let params = llama::llama_sampler_chain_default_params();
             let smpl = llama::llama_sampler_chain_init(params);
-            llama::llama_sampler_chain_add(smpl, llama::llama_sampler_init_min_p(0.05, 1));
-            llama::llama_sampler_chain_add(smpl, llama::llama_sampler_init_temp(0.8));
-            llama::llama_sampler_chain_add(smpl, llama::llama_sampler_init_dist(0xFFFFFFFF));
             Self { ptr: smpl }
         }
+    }
+
+    pub fn add<S: Sampler>(&mut self, mut s: S) {
+        unsafe { llama::llama_sampler_chain_add(self.ptr, s.as_mut()) }
+        core::mem::forget(s);
     }
 }
 

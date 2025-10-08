@@ -203,7 +203,7 @@ impl Context {
     }
 
     pub fn next_token<S: Sampler>(&mut self, sampler: &mut S, vocab: &Vocab) -> Option<Token> {
-        let new_token = sampler.sample(self);
+        let new_token = sampler.sample(self, -1);
         (!vocab.is_eog(new_token)).then_some(new_token)
     }
 
