@@ -15,6 +15,7 @@ pub trait Sampler {
         }
     }
 
+    // TODO need to expose the TokenDataArray here, do not use this API
     fn apply(&mut self) {
         unsafe {
             let m = self.as_mut();
