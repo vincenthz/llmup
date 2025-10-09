@@ -2,8 +2,8 @@ use llmup_llama_cpp_sys;
 
 use llmup_llama_cpp_sys::llama;
 
-use crate::Context;
 use crate::token::Token;
+use crate::{Context, TokenDataArray};
 
 pub trait Sampler {
     unsafe fn as_mut(&mut self) -> *mut llama::llama_sampler;
@@ -15,11 +15,10 @@ pub trait Sampler {
         }
     }
 
-    // TODO need to expose the TokenDataArray here, do not use this API
-    fn apply(&mut self) {
+    fn apply(&mut self, array: &mut TokenDataArray) {
         unsafe {
             let m = self.as_mut();
-            llama::llama_sampler_apply(m, core::ptr::null_mut())
+            array.as_mut_ptr(|p| llama::llama_sampler_apply(m, p))
         }
     }
 

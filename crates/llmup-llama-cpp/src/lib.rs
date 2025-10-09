@@ -8,6 +8,7 @@ mod log;
 mod model;
 mod sampler;
 mod token;
+mod tokendata;
 mod vocab;
 
 pub use context::{Context, ContextParams};
@@ -17,4 +18,6 @@ pub use sampler::{
     Sampler, SamplerChain, SamplerDistance, SamplerMinP, SamplerMirostatV1, SamplerMirostatV2,
     SamplerTemperature,
 };
+pub use token::Token;
+pub use tokendata::{TokenData, TokenDataArray};
 pub use vocab::Vocab;
