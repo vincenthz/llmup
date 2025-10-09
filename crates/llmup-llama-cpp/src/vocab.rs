@@ -59,6 +59,10 @@ impl Vocab {
         unsafe { llama::llama_vocab_n_tokens(self.ptr.0) as u32 }
     }
 
+    pub fn tokens(&self) -> impl Iterator<Item = Token> {
+        (0..self.n_tokens()).map(|i| Token(i as i32))
+    }
+
     pub fn as_bytes(&self, token: Token) -> Vec<u8> {
         let mut buf = vec![0u8; 256];
         let buf_ptr = buf.as_mut_ptr();

@@ -5,9 +5,8 @@ use std::ptr::null_mut;
 use std::sync::Arc;
 use std::{ffi::CStr, path::Path};
 
-use crate::Vocab;
 use crate::context::ContextParams;
-use crate::vocab::VocabPtr;
+use crate::vocab::{Vocab, VocabPtr};
 
 use super::context::{Context, ContextCreateError};
 
