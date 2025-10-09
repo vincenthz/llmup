@@ -71,6 +71,12 @@ impl TokenDataArray {
 
         let r = f(&mut c_struct);
 
+        if c_struct.selected == -1 {
+            self.selected = None
+        } else {
+            self.selected = Some(c_struct.selected as usize)
+        }
+        self.sorted = c_struct.sorted;
         r
     }
 }

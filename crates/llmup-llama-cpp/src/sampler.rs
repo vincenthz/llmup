@@ -3,7 +3,7 @@ use llmup_llama_cpp_sys;
 use llmup_llama_cpp_sys::llama;
 
 use crate::token::Token;
-use crate::{Context, TokenDataArray};
+use crate::{Context, TokenData, TokenDataArray};
 
 pub trait Sampler {
     unsafe fn as_mut(&mut self) -> *mut llama::llama_sampler;
@@ -29,8 +29,33 @@ pub trait Sampler {
         }
     }
 
-    fn sample(&mut self, context: &Context, idx: i32) -> Token {
+    fn sample_old(&mut self, context: &Context, idx: i32) -> Token {
         Token(unsafe { llama::llama_sampler_sample(self.as_mut(), context.ptr, idx) })
+    }
+
+    fn sample(&mut self, context: &Context, idx: i32) -> Token {
+        let vocab = context.model.clone().vocab();
+        let mut data = Vec::with_capacity(vocab.n_tokens() as usize);
+
+        let logits = context.get_logits(idx);
+        for (i, token) in vocab.tokens().enumerate() {
+            data.push(TokenData::new(token, logits[i], 0.0))
+        }
+        let mut array = TokenDataArray {
+            data,
+            selected: None,
+            sorted: false,
+        };
+
+        self.apply(&mut array);
+        let Some(sel) = array.selected else {
+            panic!("sampler has no token selected");
+        };
+
+        let token = array.data[sel].id();
+
+        self.accept(token);
+        token
     }
 }
 

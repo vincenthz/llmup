@@ -212,6 +212,13 @@ impl Context {
         pooling_type.into()
     }
 
+    pub fn get_logits(&self, i: i32) -> &[f32] {
+        unsafe {
+            let logits = llama::llama_get_logits_ith(self.ptr, i);
+            core::slice::from_raw_parts(logits as *const _, self.model.vocab().n_tokens() as usize)
+        }
+    }
+
     pub fn embeddings_seq_ith(&self, i: i32) -> Result<&[f32], EmbeddingSeqError> {
         let n_embd = self.model.n_embd() as usize;
 
