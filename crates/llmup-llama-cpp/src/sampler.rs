@@ -38,8 +38,8 @@ pub trait Sampler {
         let mut data = Vec::with_capacity(vocab.n_tokens() as usize);
 
         let logits = context.get_logits(idx);
-        for (i, token) in vocab.tokens().enumerate() {
-            data.push(TokenData::new(token, logits[i], 0.0))
+        for token in vocab.tokens() {
+            data.push(TokenData::new(token, logits[token.as_index()], 0.0))
         }
         let mut array = TokenDataArray {
             data,
