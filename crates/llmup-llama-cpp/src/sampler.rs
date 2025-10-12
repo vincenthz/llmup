@@ -8,18 +8,18 @@ use crate::{Context, TokenData, TokenDataArray};
 pub trait SamplerC {
     unsafe fn as_mut(&mut self) -> *mut llama::llama_sampler;
     unsafe fn as_const(&self) -> *const llama::llama_sampler;
-}
-
-pub trait Sampler {
-    fn accept(&mut self, token: Token);
-    fn apply(&mut self, array: &mut TokenDataArray);
-    fn reset(&mut self);
 
     /*
     fn sample_old(&mut self, context: &Context, idx: i32) -> Token {
         Token(unsafe { llama::llama_sampler_sample(self.as_mut(), context.ptr, idx) })
     }
     */
+}
+
+pub trait Sampler {
+    fn accept(&mut self, token: Token);
+    fn apply(&mut self, array: &mut TokenDataArray);
+    fn reset(&mut self);
 
     fn sample(&mut self, context: &Context, idx: i32) -> Token {
         let vocab = context.model.clone().vocab();
@@ -77,21 +77,37 @@ pub trait SamplerRandom: SamplerC {
 }
 
 pub struct SamplerChain {
-    pub(crate) ptr: *mut llama::llama_sampler,
+    //pub(crate) ptr: *mut llama::llama_sampler,
+    pub(crate) chain: Vec<Box<dyn Sampler>>,
 }
 
 impl SamplerChain {
     pub fn new() -> Self {
-        unsafe {
-            let params = llama::llama_sampler_chain_default_params();
-            let smpl = llama::llama_sampler_chain_init(params);
-            Self { ptr: smpl }
+        Self { chain: Vec::new() }
+    }
+
+    pub fn add(&mut self, s: Box<dyn Sampler>) {
+        self.chain.push(s)
+    }
+}
+
+impl Sampler for SamplerChain {
+    fn accept(&mut self, token: Token) {
+        for sampler in self.chain.iter_mut() {
+            sampler.accept(token)
         }
     }
 
-    pub fn add<S: SamplerC>(&mut self, mut s: S) {
-        unsafe { llama::llama_sampler_chain_add(self.ptr, s.as_mut()) }
-        core::mem::forget(s);
+    fn apply(&mut self, array: &mut TokenDataArray) {
+        for sampler in self.chain.iter_mut() {
+            sampler.apply(array)
+        }
+    }
+
+    fn reset(&mut self) {
+        for sampler in self.chain.iter_mut() {
+            sampler.reset()
+        }
     }
 }
 
@@ -188,8 +204,6 @@ impl_sampler!(SamplerTemperature);
 impl_sampler!(SamplerDistance);
 impl_sampler!(SamplerMirostatV1);
 impl_sampler!(SamplerMirostatV2);
-
-impl_sampler!(SamplerChain);
 
 impl SamplerRandom for SamplerMirostatV1 {}
 impl SamplerRandom for SamplerMirostatV2 {}

@@ -43,9 +43,9 @@ pub fn llama_init_logging(debug: bool) {
 
 pub fn llama_sampler() -> impl llama::Sampler {
     let mut sampler = llama::SamplerChain::new();
-    sampler.add(llama::SamplerMinP::new(0.05, 1));
-    sampler.add(llama::SamplerTemperature::new(0.8));
-    sampler.add(llama::SamplerDistance::new(0xFFFF_FFFF));
+    sampler.add(Box::new(llama::SamplerMinP::new(0.05, 1)));
+    sampler.add(Box::new(llama::SamplerTemperature::new(0.8)));
+    sampler.add(Box::new(llama::SamplerDistance::new(0xFFFF_FFFF)));
 
     sampler
 }
