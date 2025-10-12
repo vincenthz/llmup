@@ -46,6 +46,7 @@ pub fn llama_sampler() -> impl llama::Sampler {
     sampler.add(Box::new(llama::SamplerMinP::new(0.05, 1)));
     sampler.add(Box::new(llama::SamplerTemperature::new(0.8)));
     sampler.add(Box::new(llama::SamplerDistance::new(0xFFFF_FFFF)));
+    //sampler.add(Box::new(llama::SamplerGreedy));
 
     sampler
 }

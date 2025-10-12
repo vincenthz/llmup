@@ -207,3 +207,22 @@ impl_sampler!(SamplerMirostatV2);
 impl SamplerRandom for SamplerMirostatV1 {}
 impl SamplerRandom for SamplerMirostatV2 {}
 impl SamplerRandom for SamplerDistance {}
+
+pub struct SamplerGreedy;
+
+impl Sampler for SamplerGreedy {
+    fn accept(&mut self, _token: Token) {}
+    fn reset(&mut self) {}
+
+    fn apply(&mut self, array: &mut TokenDataArray) {
+        let mut sel = 0;
+        let mut max = 0.0;
+        for (i, d) in array.data.iter().enumerate() {
+            if d.logit() > max {
+                max = d.logit();
+                sel = i;
+            }
+        }
+        array.selected = Some(sel)
+    }
+}
