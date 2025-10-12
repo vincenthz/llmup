@@ -77,7 +77,6 @@ pub trait SamplerRandom: SamplerC {
 }
 
 pub struct SamplerChain {
-    //pub(crate) ptr: *mut llama::llama_sampler,
     pub(crate) chain: Vec<Box<dyn Sampler>>,
 }
 
