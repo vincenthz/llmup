@@ -16,7 +16,7 @@ pub use log::{LogKey, LogLevel, llama_logging};
 pub use model::{Model, ModelParams};
 pub use sampler::{
     Sampler, SamplerChain, SamplerDistance, SamplerMinP, SamplerMirostatV1, SamplerMirostatV2,
-    SamplerTemperature,
+    SamplerRandom, SamplerTemperature,
 };
 pub use token::Token;
 pub use tokendata::{TokenData, TokenDataArray};

@@ -5,33 +5,21 @@ use llmup_llama_cpp_sys::llama;
 use crate::token::Token;
 use crate::{Context, TokenData, TokenDataArray};
 
-pub trait Sampler {
+pub trait SamplerC {
     unsafe fn as_mut(&mut self) -> *mut llama::llama_sampler;
+    unsafe fn as_const(&self) -> *const llama::llama_sampler;
+}
 
-    fn accept(&mut self, token: Token) {
-        unsafe {
-            let m = self.as_mut();
-            llama::llama_sampler_accept(m, token.0)
-        }
-    }
+pub trait Sampler {
+    fn accept(&mut self, token: Token);
+    fn apply(&mut self, array: &mut TokenDataArray);
+    fn reset(&mut self);
 
-    fn apply(&mut self, array: &mut TokenDataArray) {
-        unsafe {
-            let m = self.as_mut();
-            array.as_mut_ptr(|p| llama::llama_sampler_apply(m, p))
-        }
-    }
-
-    fn reset(&mut self) {
-        unsafe {
-            let m = self.as_mut();
-            llama::llama_sampler_reset(m)
-        }
-    }
-
+    /*
     fn sample_old(&mut self, context: &Context, idx: i32) -> Token {
         Token(unsafe { llama::llama_sampler_sample(self.as_mut(), context.ptr, idx) })
     }
+    */
 
     fn sample(&mut self, context: &Context, idx: i32) -> Token {
         let vocab = context.model.clone().vocab();
@@ -59,6 +47,35 @@ pub trait Sampler {
     }
 }
 
+impl<S: SamplerC> Sampler for S {
+    fn accept(&mut self, token: Token) {
+        unsafe {
+            let m = self.as_mut();
+            llama::llama_sampler_accept(m, token.0)
+        }
+    }
+
+    fn apply(&mut self, array: &mut TokenDataArray) {
+        unsafe {
+            let m = self.as_mut();
+            array.as_mut_ptr(|p| llama::llama_sampler_apply(m, p))
+        }
+    }
+
+    fn reset(&mut self) {
+        unsafe {
+            let m = self.as_mut();
+            llama::llama_sampler_reset(m)
+        }
+    }
+}
+
+pub trait SamplerRandom: SamplerC {
+    fn get_seed(&self) -> u32 {
+        unsafe { llama::llama_sampler_get_seed(self.as_const()) }
+    }
+}
+
 pub struct SamplerChain {
     pub(crate) ptr: *mut llama::llama_sampler,
 }
@@ -72,7 +89,7 @@ impl SamplerChain {
         }
     }
 
-    pub fn add<S: Sampler>(&mut self, mut s: S) {
+    pub fn add<S: SamplerC>(&mut self, mut s: S) {
         unsafe { llama::llama_sampler_chain_add(self.ptr, s.as_mut()) }
         core::mem::forget(s);
     }
@@ -155,8 +172,11 @@ macro_rules! impl_sampler {
                 unsafe { llama::llama_sampler_free(self.ptr) }
             }
         }
-        impl Sampler for $name {
+        impl SamplerC for $name {
             unsafe fn as_mut(&mut self) -> *mut llama::llama_sampler {
+                self.ptr
+            }
+            unsafe fn as_const(&self) -> *const llama::llama_sampler {
                 self.ptr
             }
         }
@@ -164,8 +184,13 @@ macro_rules! impl_sampler {
 }
 
 impl_sampler!(SamplerMinP);
-impl_sampler!(SamplerChain);
 impl_sampler!(SamplerTemperature);
 impl_sampler!(SamplerDistance);
 impl_sampler!(SamplerMirostatV1);
 impl_sampler!(SamplerMirostatV2);
+
+impl_sampler!(SamplerChain);
+
+impl SamplerRandom for SamplerMirostatV1 {}
+impl SamplerRandom for SamplerMirostatV2 {}
+impl SamplerRandom for SamplerDistance {}
