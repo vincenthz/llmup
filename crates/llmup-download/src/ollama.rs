@@ -1,7 +1,9 @@
-use crate::ProgressDisplay;
+use crate::{ProgressDisplay, http::HttpError};
 
 use super::http;
 use llmup_store::ollama;
+use reqwest::StatusCode;
+use thiserror::Error;
 use url::Url;
 
 #[derive(Clone)]
@@ -61,6 +63,20 @@ pub fn manifest_url(
         .unwrap()
 }
 
+#[derive(Debug, Error)]
+pub enum DownloadError {
+    #[error("HTTP Error downloading {0}")]
+    HttpError(#[from] HttpError),
+    #[error("Fail to download manifest http-code={0}")]
+    ManifestError(StatusCode),
+    #[error("Fail to add manifest {0:?}")]
+    ManifestAddingFailed(std::io::Error),
+    #[error("Fail to commit blob {0} : {1}")]
+    BlobCommitFailed(ollama::Blob, std::io::Error),
+    #[error("Downloaded blob doesn't match expected {0} but got {1}")]
+    InvalidBlobDownloaded(ollama::Blob, ollama::Blob),
+}
+
 pub async fn download_model<PB: ProgressDisplay>(
     client: &reqwest::Client,
     config: &OllamaConfig,
@@ -68,7 +84,7 @@ pub async fn download_model<PB: ProgressDisplay>(
     registry: &ollama::Registry,
     model: &ollama::Model,
     variant: &ollama::Variant,
-) -> () {
+) -> Result<(), DownloadError> {
     let manifest_url = manifest_url(config, model, variant);
 
     let request = client.get(manifest_url).header(
@@ -88,7 +104,8 @@ pub async fn download_model<PB: ProgressDisplay>(
         )
         .await
     } else {
-        println!("failed to download manifest : {}", response.status())
+        Err(DownloadError::ManifestError(response.status()))
+        //println!("failed to download manifest : {}", response.status())
     }
 }
 
@@ -100,15 +117,16 @@ async fn download_model_with_manifest<PB: ProgressDisplay>(
     registry: &ollama::Registry,
     model: &ollama::Model,
     variant: &ollama::Variant,
-) {
-    download_model_blob::<PB>(client, config, store, &manifest.config.digest).await;
+) -> Result<(), DownloadError> {
+    download_model_blob::<PB>(client, config, store, &manifest.config.digest).await?;
     for layer in &manifest.layers {
-        download_model_blob::<PB>(client, config, store, &layer.digest).await
+        download_model_blob::<PB>(client, config, store, &layer.digest).await?;
     }
 
     store
         .add_manifest(registry, model, variant, manifest)
-        .unwrap();
+        .map_err(|e| DownloadError::ManifestAddingFailed(e))?;
+    Ok(())
 }
 
 async fn download_model_blob<PB: ProgressDisplay>(
@@ -116,9 +134,9 @@ async fn download_model_blob<PB: ProgressDisplay>(
     config: &OllamaConfig,
     store: &ollama::OllamaStore,
     blob: &ollama::Blob,
-) {
+) -> Result<(), DownloadError> {
     if store.blob_exists(blob) {
-        return;
+        return Ok(());
     }
 
     let blob_url = blob_url(config, blob);
@@ -126,15 +144,15 @@ async fn download_model_blob<PB: ProgressDisplay>(
 
     let mut blob_context = ollama::BlobContext::new_from_blob_type(blob);
 
-    http::download::<_, PB>(client, &blob_url, &blob_tmp_path, &mut blob_context)
-        .await
-        .unwrap();
+    http::download::<_, PB>(client, &blob_url, &blob_tmp_path, &mut blob_context).await?;
 
     let got_blob = blob_context.finalize();
     if &got_blob != blob {
         std::fs::remove_file(blob_tmp_path).unwrap();
-        panic!("blob {} invalid got {}", blob, got_blob);
+        return Err(DownloadError::InvalidBlobDownloaded(blob.clone(), got_blob));
     }
 
-    std::fs::rename(blob_tmp_path, store.blob_path(blob)).unwrap();
+    std::fs::rename(blob_tmp_path, store.blob_path(blob))
+        .map_err(|e| DownloadError::BlobCommitFailed(blob.clone(), e))?;
+    Ok(())
 }

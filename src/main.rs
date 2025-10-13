@@ -328,7 +328,7 @@ async fn cmd_pull(name: String) -> anyhow::Result<()> {
     llmup_download::ollama::download_model::<ProgressBar>(
         &client, &config, &store, &registry, &model, &variant,
     )
-    .await;
+    .await?;
 
     Ok(())
 }
