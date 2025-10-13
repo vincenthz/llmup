@@ -1,4 +1,5 @@
 use std::{
+    path::PathBuf,
     str::FromStr,
     time::{Duration, SystemTime},
 };
@@ -30,7 +31,11 @@ async fn main() -> anyhow::Result<()> {
         args::Commands::Pull { name } => cmd_pull(name).await,
         args::Commands::Remove { name } => cmd_remove(name).await,
         args::Commands::Verify { blobs } => cmd_verify(blobs).await,
-        args::Commands::Run { name, debug } => cmd_run(name, debug).await,
+        args::Commands::Run {
+            name,
+            debug,
+            model_path,
+        } => cmd_run(name, debug, model_path).await,
         args::Commands::Info { name } => cmd_info(name).await,
         args::Commands::Bench { name, max_tokens } => cmd_bench(name, max_tokens).await,
         args::Commands::Embed { name } => cmd_embed(name).await,
@@ -166,22 +171,27 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
     Ok(())
 }
 
-async fn cmd_run(name: String, debug: bool) -> anyhow::Result<()> {
-    let (model, variant) = parse_name(&name)?;
-    let ollama_run::OllamaRun {
-        model_path,
-        template: _,
-        params: _,
-    } = ollama_run::model_prepare_run(&model, &variant)?;
+async fn cmd_run(name: String, debug: bool, model_path: bool) -> anyhow::Result<()> {
+    let model_path = if model_path {
+        PathBuf::from(name)
+    } else {
+        let (model, variant) = parse_name(&name)?;
+        let ollama_run::OllamaRun {
+            model_path,
+            template: _,
+            params: _,
+        } = ollama_run::model_prepare_run(&model, &variant)?;
+        model_path
+    };
 
-    tracing_subscriber::fmt::init();
     run::llama_init_logging(debug);
+    tracing_subscriber::fmt::init();
 
     let model_params = llama::ModelParams::default();
-    let model = llama::Model::load(&model_path, &model_params).unwrap();
+    let model = llama::Model::load(&model_path, &model_params)?;
 
     let context_params = llama::ContextParams::default();
-    let mut context = model.new_context(&context_params).unwrap();
+    let mut context = model.new_context(&context_params)?;
 
     let mut rl = rustyline::DefaultEditor::new()?;
     let readline = rl.readline(">> ");
@@ -193,12 +203,16 @@ async fn cmd_run(name: String, debug: bool) -> anyhow::Result<()> {
             let line = if let Some(template) = model.chat_template() {
                 //println!("template:\n{}", template);
                 match llmup_run::chat_template(
-                    template,
+                    &template,
                     "you are a chatbot answering question",
                     &line,
                 ) {
                     Err(e) => {
                         eprintln!("rendering chat template failed: {}", e);
+                        eprintln!("chat template:");
+                        for (i, l) in template.lines().enumerate() {
+                            eprintln!("{:03} {}", i + 1, l)
+                        }
                         line
                     }
                     Ok(render) => {

@@ -7,17 +7,30 @@ fn raise_exception(err_text: String) -> Result<String, minijinja::Error> {
     ))
 }
 
-pub fn chat_template(str: String, system: &str, prompt: &str) -> Result<String, String> {
+fn strftime_now(s: String) -> Result<String, minijinja::Error> {
+    if s == "%Y-%m-%d" {
+        let naive = chrono::Utc::now().naive_utc();
+        Ok(format!("{}", naive))
+    } else {
+        Err(minijinja::Error::new(
+            minijinja::ErrorKind::InvalidOperation,
+            format!("invalid format {}", s),
+        ))
+    }
+}
+
+pub fn chat_template(template: &str, system: &str, prompt: &str) -> Result<String, String> {
     let mut env = minijinja::Environment::new();
     minijinja_contrib::add_to_environment(&mut env);
 
     env.set_unknown_method_callback(minijinja_contrib::pycompat::unknown_method_callback);
     env.add_function("raise_exception", raise_exception);
+    env.add_function("strftime_now", strftime_now);
 
     const MAIN: &str = "main";
 
     //println!("{}", str);
-    env.add_template(MAIN, &str).unwrap();
+    env.add_template(MAIN, template).unwrap();
 
     let tmpl = env.get_template(MAIN).unwrap();
     let messages = vec![

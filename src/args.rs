@@ -45,6 +45,9 @@ pub enum Commands {
         /// Debug information
         #[arg(long, default_value_t = false)]
         debug: bool,
+        /// Use model path directly (no ollama)
+        #[arg(long, default_value_t = false)]
+        model_path: bool,
     },
     /// Bench model generation
     Bench {
