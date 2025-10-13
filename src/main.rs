@@ -30,6 +30,7 @@ async fn main() -> anyhow::Result<()> {
         args::Commands::List { filter } => cmd_list(filter).await,
         args::Commands::Pull { name } => cmd_pull(name).await,
         args::Commands::Remove { name } => cmd_remove(name).await,
+        args::Commands::Set { name, key, value } => cmd_set(name, key, value).await,
         args::Commands::Verify { blobs } => cmd_verify(blobs).await,
         args::Commands::Run {
             name,
@@ -40,6 +41,40 @@ async fn main() -> anyhow::Result<()> {
         args::Commands::Bench { name, max_tokens } => cmd_bench(name, max_tokens).await,
         args::Commands::Embed { name } => cmd_embed(name).await,
     }
+}
+
+async fn cmd_set(name: String, key: String, value: String) -> anyhow::Result<()> {
+    let (model, variant) = parse_name(&name)?;
+    let (store, mut manifest) = ollama_run::ollama_model_get_manifest(&model, &variant)?;
+
+    match key.as_str() {
+        "model" => {
+            let file_path = PathBuf::from(&value);
+            if file_path.exists() {
+                let src_file = std::fs::File::open(file_path)?;
+                let blob = store.add_blob_from_file(src_file)?;
+                println!("added blob {}", blob);
+                if let Some(layer) =
+                    manifest.find_media_type_mut(llmup_store::ollama::MEDIA_TYPE_IMAGE_MODEL)
+                {
+                    layer.digest = blob;
+                } else {
+                    anyhow::bail!("manifest doesn't have a model")
+                }
+                let config = OllamaConfig::default();
+                let registry = Registry::from_str(&config.host()).unwrap();
+
+                store.add_manifest(&registry, &model, &variant, &manifest)?;
+            } else {
+                anyhow::bail!("value should be a model file")
+            }
+        }
+        _ => {
+            anyhow::bail!("unknown key to set {}", key)
+        }
+    }
+
+    Ok(())
 }
 
 async fn cmd_info(name: String) -> anyhow::Result<()> {

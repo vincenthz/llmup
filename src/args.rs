@@ -22,6 +22,14 @@ pub enum Commands {
         /// The name of the model to pull
         name: String,
     },
+    Set {
+        /// The name of the model
+        name: String,
+        /// The key to replace
+        key: String,
+        /// The value to use (can be a filepath)
+        value: String,
+    },
     /// Remove a model by name
     Remove {
         /// The name of the model to remove

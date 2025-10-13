@@ -42,14 +42,22 @@ pub struct OllamaRun {
     pub params: serde_json::Value,
 }
 
-pub fn model_prepare_run(
+pub fn ollama_model_get_manifest(
     model: &ollama::Model,
     variant: &ollama::Variant,
-) -> anyhow::Result<OllamaRun> {
+) -> anyhow::Result<(ollama::OllamaStore, ollama::Manifest)> {
     let store = llmup_store::ollama::OllamaStore::default();
     let registry = ollama::Registry::from_str(&OllamaConfig::default().host()).unwrap();
 
     let manifest = store.get_manifest(&registry, &model, &variant)?;
+    Ok((store, manifest))
+}
+
+pub fn model_prepare_run(
+    model: &ollama::Model,
+    variant: &ollama::Variant,
+) -> anyhow::Result<OllamaRun> {
+    let (store, manifest) = ollama_model_get_manifest(model, variant)?;
 
     let Some(model_layer) = manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_MODEL)
     else {

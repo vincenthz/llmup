@@ -6,6 +6,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use ulid::Ulid;
 
 pub struct OllamaStore {
     path: PathBuf,
@@ -400,6 +401,32 @@ impl OllamaStore {
         let found_blob = context.finalize();
         Ok(&found_blob == blob)
     }
+
+    pub fn add_blob_from_file(&self, mut file: std::fs::File) -> std::io::Result<Blob> {
+        let u = Ulid::new();
+        let tmp_path = self.blobs_path().join(format!("{}.tmp", u));
+
+        let mut buf = vec![0; 16384];
+
+        let mut ctx = BlobContext::new_sha256();
+        let mut out = std::fs::File::create(&tmp_path)?;
+
+        loop {
+            let n = file.read(&mut buf)?;
+            if n == 0 {
+                break;
+            };
+            out.write_all(&buf[0..n])?;
+            ctx.update(&buf[0..n]);
+        }
+        let blob = ctx.finalize();
+
+        let blob_path = self.blob_path(&blob);
+
+        std::fs::rename(tmp_path, blob_path)?;
+
+        Ok(blob)
+    }
 }
 
 fn entry_read_dir_string(
@@ -488,6 +515,10 @@ impl Manifest {
 
     pub fn find_media_type(&self, ty: &str) -> Option<&ManifestLayer> {
         self.layers.iter().find(|l| l.media_type == ty)
+    }
+
+    pub fn find_media_type_mut(&mut self, ty: &str) -> Option<&mut ManifestLayer> {
+        self.layers.iter_mut().find(|l| l.media_type == ty)
     }
 }
 
