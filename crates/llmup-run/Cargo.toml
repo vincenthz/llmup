@@ -6,10 +6,20 @@ edition = "2024"
 [dependencies]
 llmup-store = { path = "../llmup-store", version = "0.1" }
 llmup-download = { path = "../llmup-download", version = "0.1" }
-gtmpl = "0.7"
+llmup-llama-cpp = { path = "../llmup-llama-cpp", version = "0.1" }
+tokio = { version = "1", features = ["full"] }
 chrono = "*"
+thiserror = "2"
 anyhow = "1"
 ctrlc = "3.5"
 serde_json = "1"
 minijinja = { version = "2" }
 minijinja-contrib = { version = "2", features = ["pycompat"] }
+
+gtmpl = { version = "0.7", optional = true }
+
+[features]
+default = ["ollama"]
+ollama = [
+    "dep:gtmpl",
+]

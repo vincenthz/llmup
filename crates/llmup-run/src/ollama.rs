@@ -1,7 +1,8 @@
 use chrono::Local;
-use llmup_download::ollama::OllamaConfig;
 use llmup_store::ollama;
+pub use llmup_store::ollama::ModelDescr;
 use std::{path::PathBuf, str::FromStr};
+use thiserror::Error;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Role {
@@ -36,49 +37,69 @@ pub struct OllamaRunParams {
     pub is_think_set: bool,
 }
 
-pub struct OllamaRun {
+#[derive(Clone)]
+pub struct ModelConfig {
     pub model_path: PathBuf,
-    pub template: Option<gtmpl::Template>,
+    pub template: Option<String>,
     pub params: serde_json::Value,
 }
 
-pub fn ollama_model_get_manifest(
-    model: &ollama::Model,
-    variant: &ollama::Variant,
-) -> anyhow::Result<(ollama::OllamaStore, ollama::Manifest)> {
-    let store = llmup_store::ollama::OllamaStore::default();
-    let registry = ollama::Registry::from_str(&OllamaConfig::default().host()).unwrap();
+#[derive(Clone)]
+pub struct Template {}
 
-    let manifest = store.get_manifest(&registry, &model, &variant)?;
-    Ok((store, manifest))
+#[derive(Error, Debug)]
+pub enum ModelConfigGetError {
+    #[error("manifest error {0} for {1}")]
+    ManifestError(std::io::Error, ModelDescr),
+    #[error("model image not found for {0}")]
+    ModelImageNotFound(ModelDescr),
+    #[error("error reading template file {0} for {1}")]
+    ReadingTemplateError(std::io::Error, ModelDescr),
+    #[error("manifest has no parameters layer for {0}")]
+    ParametersMissing(ModelDescr),
+    #[error("error reading parameters file {0} for {1}")]
+    ReadingParameterError(std::io::Error, ModelDescr),
+    #[error("error reading parameters JSON {0} for {1}")]
+    ParameterFileNotJson(serde_json::error::Error, ModelDescr),
 }
 
-pub fn model_prepare_run(
-    model: &ollama::Model,
-    variant: &ollama::Variant,
-) -> anyhow::Result<OllamaRun> {
-    let (store, manifest) = ollama_model_get_manifest(model, variant)?;
+pub fn model_config_get(
+    model_descr: &ollama::ModelDescr,
+) -> Result<ModelConfig, ModelConfigGetError> {
+    let store = llmup_store::ollama::OllamaStore::default();
+    let manifest = store
+        .get_manifest(&model_descr)
+        .map_err(|e| ModelConfigGetError::ManifestError(e, model_descr.clone()))?;
 
     let Some(model_layer) = manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_MODEL)
     else {
-        anyhow::bail!("no model found for {:?}:{:?}", model, variant);
+        return Err(ModelConfigGetError::ModelImageNotFound(model_descr.clone()));
     };
 
     let template_data = if let Some(template_layer) =
         manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_TEMPLATE)
     {
-        Some(store.blob_read_string(&template_layer.digest)?)
+        Some(
+            store
+                .blob_read_string(&template_layer.digest)
+                .map_err(|e| ModelConfigGetError::ReadingTemplateError(e, model_descr.clone()))?,
+        )
     } else {
         None
     };
 
     let Some(params_layer) = manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_PARAMS)
     else {
-        anyhow::bail!("no params found for {:?}:{:?}", model, variant);
+        return Err(ModelConfigGetError::ParametersMissing(model_descr.clone()));
+        //anyhow::bail!("no params found for {:?}", model_descr);
     };
-    let params_data = store.blob_read_string(&params_layer.digest)?;
-    let params_json = serde_json::Value::from_str(&params_data)?;
+    let params_data = store
+        .blob_read_string(&params_layer.digest)
+        .map_err(|e| ModelConfigGetError::ReadingParameterError(e, model_descr.clone()))?;
+    let params_json = serde_json::Value::from_str(&params_data)
+        .map_err(|e| ModelConfigGetError::ParameterFileNotJson(e, model_descr.clone()))?;
 
+    /*
     let template = if let Some(template_data) = template_data {
         println!("== template layer");
         println!("{}", template_data);
@@ -96,15 +117,17 @@ pub fn model_prepare_run(
     } else {
         None
     };
+    */
 
     let path = store.blob_path(&model_layer.digest);
-    Ok(OllamaRun {
+    Ok(ModelConfig {
         model_path: path,
-        template,
+        template: template_data,
         params: params_json,
     })
 }
 
+#[allow(dead_code)]
 fn gtmpl_fn_slice(args: &[gtmpl::Value]) -> Result<gtmpl::Value, gtmpl::FuncError> {
     if args.is_empty() {
         return Err(gtmpl::FuncError::ExactlyXArgs("slice".to_string(), 1));
@@ -187,6 +210,7 @@ fn gtmpl_fn_slice(args: &[gtmpl::Value]) -> Result<gtmpl::Value, gtmpl::FuncErro
     }
 }
 
+#[allow(dead_code)]
 fn gtmpl_fn_current_date(args: &[gtmpl::Value]) -> Result<gtmpl::Value, gtmpl::FuncError> {
     if !args.is_empty() {
         return Err(gtmpl::FuncError::ExactlyXArgs(

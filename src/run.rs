@@ -51,12 +51,13 @@ pub fn llama_sampler() -> impl llama::Sampler {
     sampler
 }
 
-pub fn llama_run(context: &mut llama::Context, line: &str) -> anyhow::Result<()> {
-    let model = context.model();
-    let vocab = model.vocab();
+pub fn llama_run(context: &mut llmup_run::Context, line: &str) -> anyhow::Result<()> {
+    let model = context.model().clone();
+    let vocab = model.vocab;
 
-    let mut tokens = vocab.tokenize(line.as_bytes(), true);
-    context.append_tokens(&mut tokens)?;
+    context.append_bytes(line.as_bytes());
+
+    let context = &mut context.1;
 
     let mut sampler = llama_sampler();
 

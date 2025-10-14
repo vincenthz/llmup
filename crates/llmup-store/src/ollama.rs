@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     fs::DirEntry,
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -20,7 +21,52 @@ impl Default for OllamaStore {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ModelDescr {
+    pub registry: Registry,
+    pub model: Model,
+    pub variant: Variant,
+}
+
+impl Display for ModelDescr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.registry == Registry::default() {
+            write!(f, "{}:{}", self.model.as_str(), self.variant.as_str())
+        } else {
+            write!(
+                f,
+                "{}/{}:{}",
+                self.registry.0,
+                self.model.as_str(),
+                self.variant.as_str()
+            )
+        }
+    }
+}
+
+impl FromStr for ModelDescr {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let (registry, s) = if let Some((reg_str, rem)) = s.split_once('/') {
+            (Registry::from_str(reg_str)?, rem)
+        } else {
+            (Registry::default(), s)
+        };
+        let (model, variant) = if let Some((model_str, variant_str)) = s.split_once(':') {
+            (Model::from_str(model_str)?, Variant::from_str(variant_str)?)
+        } else {
+            (Model::from_str(s)?, Variant::from_str("latest").unwrap())
+        };
+        Ok(ModelDescr {
+            registry,
+            model,
+            variant,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Model(String);
 
 impl Model {
@@ -29,14 +75,14 @@ impl Model {
     }
 }
 impl FromStr for Model {
-    type Err = ();
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(s.to_string()))
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Variant(String);
 
 impl Variant {
@@ -45,7 +91,7 @@ impl Variant {
     }
 }
 impl FromStr for Variant {
-    type Err = ();
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self(s.to_string()))
@@ -161,8 +207,14 @@ impl BlobContext {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Registry(String);
+
+impl Default for Registry {
+    fn default() -> Self {
+        Registry("registry.ollama.ai".to_string())
+    }
+}
 
 impl FromStr for Registry {
     type Err = String;
@@ -302,13 +354,14 @@ impl OllamaStore {
         Ok(variants)
     }
 
-    pub fn get_manifest(
-        &self,
-        registry: &Registry,
-        model: &Model,
-        variant: &Variant,
-    ) -> std::io::Result<Manifest> {
-        let path = self.manifest_registry_model_variant_path(registry, model, variant);
+    pub fn get_manifest(&self, model_desc: &ModelDescr) -> std::io::Result<Manifest> {
+        let path = self.manifest_registry_model_variant_path(
+            &model_desc.registry,
+            &model_desc.model,
+            &model_desc.variant,
+        );
+
+        println!("get-manifest {}", path.display());
         let content = std::fs::read_to_string(path)?;
 
         serde_json::from_reader(std::io::Cursor::new(content)).map_err(|e| {

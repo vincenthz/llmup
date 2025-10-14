@@ -7,7 +7,7 @@ edition = "2024"
 llmup-store = { path = "crates/llmup-store", version = "0.1" }
 llmup-download = { path = "crates/llmup-download", version = "0.1" }
 llmup-run = { path = "crates/llmup-run", version = "0.1" }
-llmup-llama-cpp-sys = { path = "crates/llmup-llama-cpp-sys", version = "0.1" }
+#llmup-llama-cpp-sys = { path = "crates/llmup-llama-cpp-sys", version = "0.1" }
 llmup-llama-cpp = { path = "crates/llmup-llama-cpp", version = "0.1" }
 indicatif = "0.18"
 anyhow = "1"

@@ -17,6 +17,9 @@ pub struct Model {
 
 pub struct ModelPtr(pub(crate) *mut llama::llama_model);
 
+unsafe impl Send for ModelPtr {}
+unsafe impl Sync for ModelPtr {}
+
 impl Drop for ModelPtr {
     fn drop(&mut self) {
         unsafe {

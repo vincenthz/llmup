@@ -6,10 +6,9 @@ use std::{
 
 use clap::Parser;
 use llmup_download::ollama::OllamaConfig;
-use llmup_run::ollama as ollama_run;
-use llmup_store::ollama::{Model, OllamaStore, Registry, Variant};
+use llmup_run::{ModelDescr, ModelParameters, ollama as ollama_run};
+use llmup_store::ollama::OllamaStore;
 
-use llmup_llama_cpp as llama;
 use reqwest::ClientBuilder;
 
 mod args;
@@ -44,8 +43,9 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn cmd_set(name: String, key: String, value: String) -> anyhow::Result<()> {
-    let (model, variant) = parse_name(&name)?;
-    let (store, mut manifest) = ollama_run::ollama_model_get_manifest(&model, &variant)?;
+    let model_descr = parse_ollama_descr(&name)?;
+    let store = OllamaStore::default();
+    let mut manifest = store.get_manifest(&model_descr)?;
 
     match key.as_str() {
         "model" => {
@@ -61,10 +61,13 @@ async fn cmd_set(name: String, key: String, value: String) -> anyhow::Result<()>
                 } else {
                     anyhow::bail!("manifest doesn't have a model")
                 }
-                let config = OllamaConfig::default();
-                let registry = Registry::from_str(&config.host()).unwrap();
 
-                store.add_manifest(&registry, &model, &variant, &manifest)?;
+                store.add_manifest(
+                    &model_descr.registry,
+                    &model_descr.model,
+                    &model_descr.variant,
+                    &manifest,
+                )?;
             } else {
                 anyhow::bail!("value should be a model file")
             }
@@ -78,19 +81,10 @@ async fn cmd_set(name: String, key: String, value: String) -> anyhow::Result<()>
 }
 
 async fn cmd_info(name: String) -> anyhow::Result<()> {
-    let (model, variant) = parse_name(&name)?;
-    let ollama_run::OllamaRun {
-        model_path,
-        template: _,
-        params: _,
-    } = ollama_run::model_prepare_run(&model, &variant)?;
+    let model_descr = parse_model_descr(&name)?;
+    let model = llmup_run::Model::load(&model_descr).await?;
 
-    println!("model: {}", model_path.display());
-
-    let model_params = llama::ModelParams::default();
-    let model = llama::Model::load(&model_path, &model_params)?;
-
-    if let Some(chat_template) = model.chat_template() {
+    if let Some(chat_template) = model.model.chat_template() {
         println!("chat-template:\n{}", chat_template)
     }
 
@@ -98,60 +92,36 @@ async fn cmd_info(name: String) -> anyhow::Result<()> {
 }
 
 async fn cmd_embed(name: String) -> anyhow::Result<()> {
-    let (model, variant) = parse_name(&name)?;
-    let ollama_run::OllamaRun {
-        model_path,
-        template: _,
-        params: _,
-    } = ollama_run::model_prepare_run(&model, &variant)?;
+    let model_descr = parse_model_descr(&name)?;
+    let model = llmup_run::Model::load(&model_descr).await?;
 
     run::llama_init_logging(false);
 
-    let model_params = llama::ModelParams::default();
-    let model = llama::Model::load(&model_path, &model_params)?;
-    let vocab = model.vocab();
-
-    let context_params = llama::ContextParams {
-        embeddings: true,
-        ..llama::ContextParams::default()
-    };
-    let mut context = model.new_context(&context_params)?;
-
-    if model.has_encoder() && model.has_decoder() {
-        panic!("cannot generate embeddings in models with encoder-decoder")
-    }
+    let mut context = model.new_context_embeddings().1;
 
     let pooling_type = context.pooling_type();
 
     println!("pooling type: {:?}", pooling_type);
 
-    let tokens = vocab.tokenize(b"test", true);
+    let tokens = model.vocab.tokenize(b"test", true);
 
     let e = context.embeddings(&tokens)?;
 
     println!("embedding {:?}", e);
-
     Ok(())
 }
 
 async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> {
-    let (model, variant) = parse_name(&name)?;
-    let ollama_run::OllamaRun {
-        model_path,
-        template: _,
-        params: _,
-    } = ollama_run::model_prepare_run(&model, &variant)?;
+    let model_descr = parse_model_descr(&name)?;
 
     let max_tokens = max_tokens.unwrap_or(u64::MAX);
 
     run::llama_init_logging(false);
 
-    let model_params = llama::ModelParams::default();
-    let model = llama::Model::load(&model_path, &model_params)?;
-    let vocab = model.vocab();
+    let model = llmup_run::Model::load(&model_descr).await?;
 
-    let context_params = llama::ContextParams::default();
-    let mut context = model.new_context(&context_params)?;
+    let mut context = model.new_context().1;
+    let vocab = model.vocab;
 
     const BENCHMARK_CONTEXT: &str = "this is a context for doing tokens benchmarks";
     let tokens = vocab.tokenize(BENCHMARK_CONTEXT.as_bytes(), true);
@@ -207,26 +177,18 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
 }
 
 async fn cmd_run(name: String, debug: bool, model_path: bool) -> anyhow::Result<()> {
-    let model_path = if model_path {
-        PathBuf::from(name)
+    let model_descr = if model_path {
+        ModelDescr::Path(PathBuf::from(name))
     } else {
-        let (model, variant) = parse_name(&name)?;
-        let ollama_run::OllamaRun {
-            model_path,
-            template: _,
-            params: _,
-        } = ollama_run::model_prepare_run(&model, &variant)?;
-        model_path
+        ModelDescr::Ollama(llmup_run::ollama::ModelDescr::from_str(&name).unwrap())
     };
 
     run::llama_init_logging(debug);
     tracing_subscriber::fmt::init();
 
-    let model_params = llama::ModelParams::default();
-    let model = llama::Model::load(&model_path, &model_params)?;
+    let model = llmup_run::Model::load(&model_descr).await?;
 
-    let context_params = llama::ContextParams::default();
-    let mut context = model.new_context(&context_params)?;
+    let mut context = model.new_context();
 
     let mut rl = rustyline::DefaultEditor::new()?;
     let readline = rl.readline(">> ");
@@ -235,30 +197,12 @@ async fn cmd_run(name: String, debug: bool, model_path: bool) -> anyhow::Result<
             anyhow::bail!("error {:?}", e);
         }
         Ok(line) => {
-            let line = if let Some(template) = model.chat_template() {
-                //println!("template:\n{}", template);
-                match llmup_run::chat_template(
-                    &template,
-                    "you are a chatbot answering question",
-                    &line,
-                ) {
-                    Err(e) => {
-                        eprintln!("rendering chat template failed: {}", e);
-                        eprintln!("chat template:");
-                        for (i, l) in template.lines().enumerate() {
-                            eprintln!("{:03} {}", i + 1, l)
-                        }
-                        line
-                    }
-                    Ok(render) => {
-                        //println!("rendered:\n{}", render);
-                        render
-                    }
-                }
-            } else {
-                line
+            let parameters = ModelParameters {
+                system: "you are a chatbot answering question".to_string(),
+                prompt: line,
             };
-            run::llama_run(&mut context, &line)?;
+            let template = model.model_template_render(&parameters);
+            run::llama_run(&mut context, &template)?;
             Ok(())
         }
     }
@@ -283,7 +227,12 @@ async fn cmd_list(filter: Option<String>) -> anyhow::Result<()> {
                 let metadata = fs.metadata().await?;
                 let modified = metadata.modified()?;
 
-                let manifest = store.get_manifest(&reg, &model, &variant)?;
+                let descr = ollama_run::ModelDescr {
+                    registry: reg.clone(),
+                    model: model.clone(),
+                    variant: variant.clone(),
+                };
+                let manifest = store.get_manifest(&descr)?;
                 let size = manifest.size();
                 let name = format!("{}:{}", model.as_str(), variant.as_str());
                 let acceptable = if let Some(filter) = &filter {
@@ -314,7 +263,7 @@ async fn cmd_list(filter: Option<String>) -> anyhow::Result<()> {
 }
 
 async fn cmd_pull(name: String) -> anyhow::Result<()> {
-    let (model, variant) = parse_name(&name)?;
+    let model_descr = parse_ollama_descr(&name)?;
 
     let store = OllamaStore::default();
     let config = OllamaConfig::default();
@@ -324,9 +273,13 @@ async fn cmd_pull(name: String) -> anyhow::Result<()> {
         .build()
         .unwrap();
 
-    let registry = Registry::from_str(&config.host()).unwrap();
     llmup_download::ollama::download_model::<ProgressBar>(
-        &client, &config, &store, &registry, &model, &variant,
+        &client,
+        &config,
+        &store,
+        &model_descr.registry,
+        &model_descr.model,
+        &model_descr.variant,
     )
     .await?;
 
@@ -334,13 +287,15 @@ async fn cmd_pull(name: String) -> anyhow::Result<()> {
 }
 
 async fn cmd_remove(name: String) -> anyhow::Result<()> {
-    let (model, variant) = parse_name(&name)?;
-
+    let llmup_run::ModelDescr::Ollama(model_descr) = parse_model_descr(&name)? else {
+        anyhow::bail!("ollama invalid name")
+    };
     let store = OllamaStore::default();
-    let config = OllamaConfig::default();
-    let registry = Registry::from_str(&config.host()).unwrap();
-
-    store.remove_manifest(&registry, &model, &variant)?;
+    store.remove_manifest(
+        &model_descr.registry,
+        &model_descr.model,
+        &model_descr.variant,
+    )?;
 
     Ok(())
 }
@@ -354,7 +309,12 @@ async fn cmd_verify(blobs: bool) -> anyhow::Result<()> {
         for model in models {
             let variants = store.list_model_variants(&reg, &model)?;
             for variant in variants {
-                let manifest = store.get_manifest(&reg, &model, &variant)?;
+                let model_descr = ollama_run::ModelDescr {
+                    registry: reg.clone(),
+                    model: model.clone(),
+                    variant: variant.clone(),
+                };
+                let manifest = store.get_manifest(&model_descr)?;
                 let digests = manifest.all_digests();
 
                 let mut failed = Vec::new();
@@ -386,13 +346,14 @@ async fn cmd_verify(blobs: bool) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn parse_name(name: &str) -> anyhow::Result<(Model, Variant)> {
-    let Some((model_name, variant_name)) = name.split_once(':') else {
-        anyhow::bail!("'{}' should have <model>:<tag> format", name);
-    };
+fn parse_ollama_descr(name: &str) -> anyhow::Result<ollama_run::ModelDescr> {
+    ollama_run::ModelDescr::from_str(name).map_err(|_| {
+        anyhow::anyhow!("Invalid Ollama model description: expecting <registry>/<model>:<variant> or <model>:<variant>")
+    })
+}
 
-    let model = Model::from_str(model_name).map_err(|_| anyhow::anyhow!("invalid model name"))?;
-    let variant =
-        Variant::from_str(variant_name).map_err(|_| anyhow::anyhow!("invalid variant name"))?;
-    Ok((model, variant))
+fn parse_model_descr(name: &str) -> anyhow::Result<llmup_run::ModelDescr> {
+    ollama_run::ModelDescr::from_str(name).map_err(|_| {
+        anyhow::anyhow!("Invalid Ollama model description: expecting <registry>/<model>:<variant> or <model>:<variant>")
+    }).map(llmup_run::ModelDescr::Ollama)
 }

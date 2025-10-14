@@ -13,7 +13,7 @@ mod vocab;
 
 pub use context::{Context, ContextParams};
 pub use log::{LogKey, LogLevel, llama_logging};
-pub use model::{Model, ModelParams};
+pub use model::{Model, ModelLoadError, ModelParams};
 pub use sampler::{
     Sampler, SamplerChain, SamplerDistance, SamplerGreedy, SamplerMinP, SamplerMirostatV1,
     SamplerMirostatV2, SamplerRandom, SamplerTemperature,
