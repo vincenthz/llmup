@@ -8,7 +8,7 @@ repository = "https://github.com/vincenthz/llmup"
 keywords = ["AI", "llama", "mlx", "deep-learning", "machine-learning"]
 categories = ["science"]
 license = "MIT OR Apache-2.0"
-rust-version = "1.82.0"
+rust-version = "1.85.0"
 
 [workspace]
 members = [
@@ -32,20 +32,4 @@ llmup-llama-cpp = { version = "0.1", path = "crates/llmup-llama-cpp" }
 tokio = { version = "1", features = ["full"] }
 thiserror = "2"
 anyhow = "1"
-
-#[dependencies]
-
-#llmup-store = { path = "crates/llmup-store", version = "0.1" }
-#llmup-download = { path = "crates/llmup-download", version = "0.1" }
-#llmup-run = { path = "crates/llmup-run", version = "0.1" }
-#llmup-llama-cpp-sys = { path = "crates/llmup-llama-cpp-sys", version = "0.1" }
-#llmup-llama-cpp = { path = "crates/llmup-llama-cpp", version = "0.1" }
-#indicatif = "0.18"
-#reqwest = "0.12"
-#url = "2"
-#clap = { version = "4", features = ["derive"] }
-#hex = "0.4"
-#tracing = "0.1"
-#tracing-subscriber = "0.3"
-#rustyline = "17"
-#ctrlc = "3.5"
+tracing = "0.1"
