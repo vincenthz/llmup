@@ -1,8 +1,13 @@
 [package]
 name = "llmup-llama-cpp"
 version = "0.1.0"
-edition = "2024"
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
 
 [dependencies]
-llmup-llama-cpp-sys = { path = "../llmup-llama-cpp-sys", version = "0.1" }
-thiserror = "2"
+llmup-llama-cpp-sys.workspace = true
+thiserror.workspace = true

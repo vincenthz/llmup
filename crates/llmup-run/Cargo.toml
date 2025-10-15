@@ -1,21 +1,25 @@
 [package]
 name = "llmup-run"
-version = "0.1.0"
-edition = "2024"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
 
 [dependencies]
-llmup-store = { path = "../llmup-store", version = "0.1" }
-llmup-download = { path = "../llmup-download", version = "0.1" }
-llmup-llama-cpp = { path = "../llmup-llama-cpp", version = "0.1" }
-tokio = { version = "1", features = ["full"] }
+llmup-store.workspace = true
+llmup-download.workspace = true
+llmup-llama-cpp.workspace = true
+tokio.workspace = true
+thiserror.workspace = true
 chrono = "*"
-thiserror = "2"
 anyhow = "1"
 ctrlc = "3.5"
 serde_json = "1"
 minijinja = { version = "2" }
 minijinja-contrib = { version = "2", features = ["pycompat"] }
-
 gtmpl = { version = "0.7", optional = true }
 
 [features]

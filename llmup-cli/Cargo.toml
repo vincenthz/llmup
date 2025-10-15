@@ -1,0 +1,27 @@
+[package]
+name = "llmup-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
+
+[dependencies]
+llmup-store.workspace = true
+llmup-download.workspace = true
+llmup-run.workspace = true
+llmup-llama-cpp.workspace = true
+anyhow.workspace = true
+
+indicatif = "0.18"
+reqwest = "0.12"
+tokio = { version = "1", features = ["full"] }
+url = "2"
+clap = { version = "4", features = ["derive"] }
+hex = "0.4"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+rustyline = "17"
+ctrlc = "3.5"
