@@ -18,6 +18,7 @@ members = [
     "crates/llmup-llama-cpp",
     "crates/llmup-run",
     "llmup-cli",
+    "llmup-chat",
 ]
 
 resolver = "2"
