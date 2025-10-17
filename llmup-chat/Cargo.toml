@@ -11,3 +11,10 @@ rust-version.workspace = true
 
 [dependencies]
 gpui = "*"
+gpui-component = "0.3.0-preview1"
+rust-embed = { version = "8", features = ["interpolate-folder-path"] }
+
+llmup-run.workspace = true
+llmup-store.workspace = true
+llmup-download.workspace = true
+anyhow.workspace = true
