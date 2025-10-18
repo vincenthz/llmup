@@ -1,16 +1,7 @@
 use gpui::*;
 use gpui_component::{
-    ActiveTheme, IconName, Root, Side, TitleBar, blue_400,
-    button::{Button, ButtonVariants},
-    context_menu::ContextMenuExt,
-    green_400,
-    group_box::GroupBox,
-    h_flex,
-    input::{InputState, TextInput},
-    label::Label,
-    resizable::{ResizableState, h_resizable, resizable_panel},
+    IconName, Side,
     sidebar::{Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem},
-    v_flex,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -55,7 +46,7 @@ pub struct AppSidebar {
 }
 
 impl AppSidebar {
-    pub fn new(_: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(_: &mut Window, _cx: &mut Context<Self>) -> Self {
         Self {
             collapsed: false,
             active: Item::Playground,
@@ -68,7 +59,7 @@ impl AppSidebar {
 }
 
 impl Render for AppSidebar {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let group = vec![Item::Playground, Item::Models, Item::Settings];
 
         Sidebar::new(Side::Left)

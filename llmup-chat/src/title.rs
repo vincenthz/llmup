@@ -1,18 +1,11 @@
-use std::rc::Rc;
-
 use gpui::{
-    AnyElement, App, AppContext, Context, Corner, Entity, FocusHandle, InteractiveElement as _,
-    IntoElement, Menu, MenuItem, MouseButton, ParentElement as _, Render, SharedString,
-    Styled as _, Subscription, Window, div, px,
+    App, Context, Entity, InteractiveElement as _, IntoElement, Menu, MenuItem, MouseButton,
+    ParentElement as _, Render, SharedString, Styled as _, Window, div,
 };
 use gpui_component::{
-    ActiveTheme as _, ContextModal as _, IconName, PixelsExt, Sizable as _, Theme, ThemeMode,
-    ThemeRegistry, TitleBar,
-    badge::Badge,
+    IconName, Sizable as _, ThemeMode, ThemeRegistry, TitleBar,
     button::{Button, ButtonVariants as _},
     menu::AppMenuBar,
-    popup_menu::PopupMenuExt as _,
-    scroll::ScrollbarShow,
 };
 
 use crate::{
@@ -101,7 +94,7 @@ pub fn app_menus_init(title: impl Into<SharedString>, cx: &mut App) {
 }
 
 impl Render for AppTitleBar {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         TitleBar::new()
             .child(div().flex().items_center().child(self.app_menu_bar.clone()))
             .child(

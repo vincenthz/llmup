@@ -1,5 +1,5 @@
 use gpui::{Action, App, SharedString};
-use gpui_component::{ActiveTheme, Theme, ThemeMode, ThemeRegistry, scroll::ScrollbarShow};
+use gpui_component::{Theme, ThemeMode, ThemeRegistry};
 
 pub fn init(cx: &mut App) {
     if let Some(theme) = ThemeRegistry::global(cx)
@@ -10,7 +10,7 @@ pub fn init(cx: &mut App) {
         Theme::global_mut(cx).apply_config(&theme);
     }
 
-    cx.observe_global::<Theme>(|cx| {
+    cx.observe_global::<Theme>(|_cx| {
         // when theme change
     })
     .detach();

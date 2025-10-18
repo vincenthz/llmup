@@ -1,11 +1,7 @@
 use gpui::*;
 use gpui_component::{
-    ActiveTheme, IconName, Root, TitleBar, blue_100, blue_200, blue_400, blue_800,
-    button::{Button, ButtonVariants},
-    context_menu::ContextMenuExt,
-    green_100, green_400, green_800,
+    ActiveTheme, blue_100, blue_200, blue_800, green_100, green_800,
     group_box::GroupBox,
-    h_flex,
     input::{InputState, TextInput},
     label::Label,
     resizable::{ResizableState, h_resizable, resizable_panel},
@@ -26,6 +22,7 @@ pub struct Playground {
 /// An asset source that loads assets from the `./assets` folder.
 pub struct History {
     pub title: String,
+    #[allow(dead_code)]
     pub content: String,
 }
 
@@ -75,7 +72,7 @@ pub(crate) fn agent_message(is_dark: bool, content: impl Into<SharedString>) -> 
 
 impl Render for Playground {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let query = self.search_input.read(cx).value().trim().to_lowercase();
+        let _query = self.search_input.read(cx).value().trim().to_lowercase();
 
         let histories = self.history.iter().collect::<Vec<_>>();
         let is_dark = cx.theme().is_dark();
@@ -138,7 +135,7 @@ impl Render for Playground {
                             .child(
                                 SidebarMenu::new().children(
                                     histories.clone().into_iter().enumerate().map(
-                                        |(idx, history)| {
+                                        |(_idx, history)| {
                                             //SidebarMenu::menu().children()
                                             SidebarMenuItem::new(history.read(cx).title.clone())
                                         },

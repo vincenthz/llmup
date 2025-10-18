@@ -1,17 +1,5 @@
 use gpui::*;
-use gpui_component::{
-    ActiveTheme, IconName, Root, TitleBar, blue_400,
-    button::{Button, ButtonVariants},
-    context_menu::ContextMenuExt,
-    green_400,
-    group_box::GroupBox,
-    h_flex,
-    input::{InputState, TextInput},
-    label::Label,
-    resizable::{ResizableState, h_resizable, resizable_panel},
-    sidebar::{Sidebar, SidebarHeader, SidebarMenu, SidebarMenuItem},
-    v_flex,
-};
+use gpui_component::{ActiveTheme, Root, TitleBar, h_flex, v_flex};
 use llmup_chat::{AppSidebar, AppTitleBar, Playground};
 
 pub struct LLMChat {
