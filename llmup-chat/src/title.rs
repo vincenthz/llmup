@@ -102,7 +102,25 @@ pub fn app_menus_init(title: impl Into<SharedString>, cx: &mut App) {
 
 impl Render for AppTitleBar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        TitleBar::new().child(div().flex().items_center().child(self.app_menu_bar.clone()))
+        TitleBar::new()
+            .child(div().flex().items_center().child(self.app_menu_bar.clone()))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_end()
+                    .px_2()
+                    .gap_2()
+                    .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
+                    // add the github button of the project
+                    .child(
+                        Button::new("github")
+                            .icon(IconName::GitHub)
+                            .small()
+                            .ghost()
+                            .on_click(|_, _, cx| cx.open_url("https://github.com/vincenthz/llmup")),
+                    ),
+            )
     }
 }
 
