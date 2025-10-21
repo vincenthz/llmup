@@ -12,7 +12,6 @@ license.workspace = true
 llmup-store.workspace = true
 llmup-download.workspace = true
 llmup-llama-cpp.workspace = true
-tokio.workspace = true
 thiserror.workspace = true
 chrono = "*"
 anyhow = "1"
@@ -24,6 +23,4 @@ gtmpl = { version = "0.7", optional = true }
 
 [features]
 default = ["ollama"]
-ollama = [
-    "dep:gtmpl",
-]
+ollama = ["dep:gtmpl"]

@@ -3,15 +3,16 @@ mod template;
 
 use std::hash::Hash;
 use std::path::PathBuf;
+use std::sync::Mutex;
 use std::{collections::HashMap, sync::Arc};
 
 use thiserror::Error;
-use tokio::sync::Mutex;
 
 use llmup_llama_cpp as llama;
 
 pub use template::chat_template;
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum ModelDescr {
     Ollama(ollama::ModelDescr),
     Path(PathBuf),
@@ -39,7 +40,7 @@ pub enum ModelLoadError {
 }
 
 impl Model {
-    pub async fn load(descr: &ModelDescr) -> Result<Self, ModelLoadError> {
+    pub fn load(descr: &ModelDescr) -> Result<Self, ModelLoadError> {
         let (config, model_path) = match descr {
             ModelDescr::Ollama(model_descr) => {
                 let config = ollama::model_config_get(model_descr)?;
@@ -48,18 +49,14 @@ impl Model {
             }
             ModelDescr::Path(path_buf) => (ModelConfig::Implicit, path_buf.clone()),
         };
-        tokio::task::spawn_blocking(move || {
-            let params = llama::ModelParams::default();
-            llama::Model::load(model_path, &params)
-                .map_err(ModelLoadError::LlamaModelFailedLoading)
-                .map(|m| Model {
-                    vocab: m.vocab(),
-                    model: m,
-                    config: Arc::new(config),
-                })
-        })
-        .await
-        .expect("no thread join error")
+        let params = llama::ModelParams::default();
+        llama::Model::load(model_path, &params)
+            .map_err(ModelLoadError::LlamaModelFailedLoading)
+            .map(|m| Model {
+                vocab: m.vocab(),
+                model: m,
+                config: Arc::new(config),
+            })
     }
 
     pub fn new_context(&self) -> Context {
@@ -149,13 +146,13 @@ impl<K: Hash + Eq> Models<K> {
         }
     }
 
-    pub async fn set(&self, key: K, model: Model) {
-        let mut models = self.models.lock().await;
+    pub fn set(&self, key: K, model: Model) {
+        let mut models = self.models.lock().unwrap();
         models.insert(key, model.clone());
     }
 
-    pub async fn get(&self, key: K) -> Option<Model> {
-        let models = self.models.lock().await;
+    pub fn get(&self, key: K) -> Option<Model> {
+        let models = self.models.lock().unwrap();
         models.get(&key).map(|m| m.clone())
     }
 }

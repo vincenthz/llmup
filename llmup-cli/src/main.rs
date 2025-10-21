@@ -82,7 +82,7 @@ async fn cmd_set(name: String, key: String, value: String) -> anyhow::Result<()>
 
 async fn cmd_info(name: String) -> anyhow::Result<()> {
     let model_descr = parse_model_descr(&name)?;
-    let model = llmup_run::Model::load(&model_descr).await?;
+    let model = llmup_run::Model::load(&model_descr)?;
 
     if let Some(chat_template) = model.model.chat_template() {
         println!("chat-template:\n{}", chat_template)
@@ -93,7 +93,7 @@ async fn cmd_info(name: String) -> anyhow::Result<()> {
 
 async fn cmd_embed(name: String) -> anyhow::Result<()> {
     let model_descr = parse_model_descr(&name)?;
-    let model = llmup_run::Model::load(&model_descr).await?;
+    let model = llmup_run::Model::load(&model_descr)?;
 
     run::llama_init_logging(false);
 
@@ -118,7 +118,7 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
 
     run::llama_init_logging(false);
 
-    let model = llmup_run::Model::load(&model_descr).await?;
+    let model = llmup_run::Model::load(&model_descr)?;
 
     let mut context = model.new_context().1;
     let vocab = model.vocab;
@@ -186,7 +186,7 @@ async fn cmd_run(name: String, debug: bool, model_path: bool) -> anyhow::Result<
     run::llama_init_logging(debug);
     tracing_subscriber::fmt::init();
 
-    let model = llmup_run::Model::load(&model_descr).await?;
+    let model = llmup_run::Model::load(&model_descr)?;
 
     let mut context = model.new_context();
 

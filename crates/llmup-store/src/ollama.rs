@@ -21,7 +21,7 @@ impl Default for OllamaStore {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ModelDescr {
     pub registry: Registry,
     pub model: Model,
@@ -66,7 +66,7 @@ impl FromStr for ModelDescr {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Model(String);
 
 impl Model {
@@ -82,7 +82,7 @@ impl FromStr for Model {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Variant(String);
 
 impl Variant {
@@ -207,7 +207,7 @@ impl BlobContext {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Registry(String);
 
 impl Default for Registry {
@@ -354,6 +354,29 @@ impl OllamaStore {
         Ok(variants)
     }
 
+    pub fn list_model_descrs(&self) -> std::io::Result<Vec<ModelDescr>> {
+        let regs = self.list_registries()?;
+
+        let mut descrs = Vec::new();
+
+        for reg in regs {
+            let models = self.list_models(&reg)?;
+            for model in models {
+                let variants = self.list_model_variants(&reg, &model)?;
+                for variant in variants {
+                    let descr = ModelDescr {
+                        registry: reg.clone(),
+                        model: model.clone(),
+                        variant: variant.clone(),
+                    };
+                    descrs.push(descr)
+                }
+            }
+        }
+        descrs.sort_by(|d1, d2| d1.cmp(d2));
+        Ok(descrs)
+    }
+
     pub fn get_manifest(&self, model_desc: &ModelDescr) -> std::io::Result<Manifest> {
         let path = self.manifest_registry_model_variant_path(
             &model_desc.registry,
@@ -361,7 +384,6 @@ impl OllamaStore {
             &model_desc.variant,
         );
 
-        println!("get-manifest {}", path.display());
         let content = std::fs::read_to_string(path)?;
 
         serde_json::from_reader(std::io::Cursor::new(content)).map_err(|e| {
