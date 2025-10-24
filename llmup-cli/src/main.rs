@@ -4,6 +4,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+use anyhow::Context;
 use clap::Parser;
 use llmup_download::ollama::OllamaConfig;
 use llmup_run::{ModelDescr, ModelParameters, ollama as ollama_run};
@@ -203,7 +204,8 @@ async fn cmd_run(
     let mut context = model.new_context();
 
     let input_data = if let Some(input_file) = input {
-        std::fs::read_to_string(input_file)?
+        std::fs::read_to_string(&input_file)
+            .with_context(|| format!("reading input file {}", input_file))?
     } else {
         String::new()
     };
