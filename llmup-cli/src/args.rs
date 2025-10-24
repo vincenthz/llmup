@@ -56,6 +56,15 @@ pub enum Commands {
         /// Use model path directly (no ollama)
         #[arg(long, default_value_t = false)]
         model_path: bool,
+        /// Use model path directly (no ollama)
+        #[arg(long)]
+        system: Option<String>,
+        /// User input file
+        #[arg(long)]
+        input: Option<String>,
+        /// Don't ask for a prompt
+        #[arg(long, default_value_t = false)]
+        no_prompt: bool,
     },
     /// Bench model generation
     Bench {

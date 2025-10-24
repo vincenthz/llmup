@@ -35,7 +35,10 @@ async fn main() -> anyhow::Result<()> {
             name,
             debug,
             model_path,
-        } => cmd_run(name, debug, model_path).await,
+            no_prompt,
+            system,
+            input,
+        } => cmd_run(name, debug, model_path, no_prompt, system, input).await,
         args::Commands::Info { name } => cmd_info(name).await,
         args::Commands::Bench { name, max_tokens } => cmd_bench(name, max_tokens).await,
         args::Commands::Embed { name } => cmd_embed(name).await,
@@ -176,7 +179,16 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
     Ok(())
 }
 
-async fn cmd_run(name: String, debug: bool, model_path: bool) -> anyhow::Result<()> {
+async fn cmd_run(
+    name: String,
+    debug: bool,
+    model_path: bool,
+    no_prompt: bool,
+    system: Option<String>,
+    input: Option<String>,
+) -> anyhow::Result<()> {
+    const DEFAULT_SYSTEM_PROMPT: &str = "you are a chatbot answering question";
+
     let model_descr = if model_path {
         ModelDescr::Path(PathBuf::from(name))
     } else {
@@ -190,22 +202,29 @@ async fn cmd_run(name: String, debug: bool, model_path: bool) -> anyhow::Result<
 
     let mut context = model.new_context();
 
-    let mut rl = rustyline::DefaultEditor::new()?;
-    let readline = rl.readline(">> ");
-    match readline {
-        Err(e) => {
-            anyhow::bail!("error {:?}", e);
+    let input_data = if let Some(input_file) = input {
+        std::fs::read_to_string(input_file)?
+    } else {
+        String::new()
+    };
+
+    let prompt = if no_prompt {
+        input_data
+    } else {
+        let mut rl = rustyline::DefaultEditor::new()?;
+        match rl.readline(">> ") {
+            Err(e) => {
+                anyhow::bail!("error {:?}", e);
+            }
+            Ok(line) => format!("{}\n{}", input_data, line),
         }
-        Ok(line) => {
-            let parameters = ModelParameters {
-                system: "you are a chatbot answering question".to_string(),
-                prompt: line,
-            };
-            let template = model.model_template_render(&parameters);
-            run::llama_run(&mut context, &template)?;
-            Ok(())
-        }
-    }
+    };
+
+    let system = system.unwrap_or_else(|| DEFAULT_SYSTEM_PROMPT.to_string());
+    let parameters = ModelParameters { system, prompt };
+    let template = model.model_template_render(&parameters);
+    run::llama_run(&mut context, &template)?;
+    Ok(())
 }
 
 async fn cmd_list(filter: Option<String>) -> anyhow::Result<()> {

@@ -196,9 +196,22 @@ impl Context {
     }
 
     pub fn append_tokens(&mut self, tokens: &[Token]) -> Result<(), DecodeError> {
-        let batch = Batch::from_tokens(tokens, self.tokens);
-        self.decode(&batch)?;
-        self.tokens += tokens.len();
+        if tokens.is_empty() {
+            return Ok(());
+        }
+        const MAX_CHUNKS: usize = 512;
+        let sz = std::cmp::min(tokens.len(), MAX_CHUNKS);
+
+        let mut batch = Batch::new(sz, 0, 1);
+        for chunks in tokens.chunks(MAX_CHUNKS) {
+            for (i, token) in chunks.iter().enumerate() {
+                let last = i == chunks.len() - 1;
+                batch.append(*token, self.tokens + i, &[0], last);
+            }
+            self.decode(&batch)?;
+            batch.clear();
+            self.tokens += chunks.len();
+        }
         Ok(())
     }
 

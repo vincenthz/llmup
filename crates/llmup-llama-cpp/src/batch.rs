@@ -94,6 +94,7 @@ impl Batch {
         self.batch.n_tokens = 0;
     }
 
+    #[allow(unused)]
     pub fn from_tokens(tokens: &[Token], at: usize) -> Self {
         let mut batch = Batch::new(tokens.len(), 0, 1);
         for (i, token) in tokens.iter().enumerate() {
