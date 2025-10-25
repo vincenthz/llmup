@@ -7,6 +7,7 @@ repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
 license.workspace = true
+description = "Llmup rust safe wrapper for llama.cpp"
 
 [dependencies]
 llmup-llama-cpp-sys.workspace = true

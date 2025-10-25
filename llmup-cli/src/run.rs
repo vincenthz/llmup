@@ -28,7 +28,7 @@ impl Output {
 pub fn llama_init_logging(debug: bool) {
     llama::llama_logging(Box::new(move |level, key, t| {
         if level != llama::LogLevel::Error
-            && (!debug && ![llama::LogKey::ModelLoader].iter().any(|k| *k == key))
+            && (!debug && ![llama::LogKey::ModelLoader].contains(&key))
         {
             return;
         }

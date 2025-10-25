@@ -201,8 +201,6 @@ async fn cmd_run(
 
     let model = llmup_run::Model::load(&model_descr)?;
 
-    let mut context = model.new_context();
-
     let input_data = if let Some(input_file) = input {
         std::fs::read_to_string(&input_file)
             .with_context(|| format!("reading input file {}", input_file))?
@@ -223,8 +221,11 @@ async fn cmd_run(
     };
 
     let system = system.unwrap_or_else(|| DEFAULT_SYSTEM_PROMPT.to_string());
+
     let parameters = ModelParameters { system, prompt };
     let template = model.model_template_render(&parameters);
+
+    let mut context = model.new_context();
     run::llama_run(&mut context, &template)?;
     Ok(())
 }
