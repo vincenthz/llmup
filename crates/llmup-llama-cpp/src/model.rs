@@ -84,7 +84,7 @@ impl Model {
     pub fn description(&self) -> String {
         let sz = unsafe { llama::llama_model_desc(self.ptr.0, null_mut(), 0) as usize };
         let mut buf = vec![0; sz];
-        unsafe { llama::llama_model_desc(self.ptr.0, buf.as_mut_ptr() as *mut i8, sz) };
+        unsafe { llama::llama_model_desc(self.ptr.0, buf.as_mut_ptr() as *mut ::std::os::raw::c_char, sz) };
         String::from_utf8(buf).unwrap()
     }
 
