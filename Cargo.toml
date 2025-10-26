@@ -16,6 +16,7 @@ members = [
     "crates/llmup-download",
     "crates/llmup-llama-cpp-sys",
     "crates/llmup-llama-cpp",
+    "crates/llmup-hf",
     "crates/llmup-run",
     "llmup-cli",
 ]

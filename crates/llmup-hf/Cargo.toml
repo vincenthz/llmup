@@ -1,0 +1,13 @@
+[package]
+name = "llmup-hf"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+hf-hub = "0.4"
