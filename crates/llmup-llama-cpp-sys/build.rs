@@ -44,7 +44,6 @@ const WARNING_FLAGS: &[&str] = &[
     "-Wpedantic",
     "-Wcast-qual",
     "-Wno-unused-function",
-    "-Wunreachable-code-break",
     //"-Wdouble-promotion",
 ];
 
