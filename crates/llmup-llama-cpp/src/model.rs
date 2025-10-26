@@ -122,5 +122,5 @@ use std::os::unix::ffi::OsStrExt;
 
 #[cfg(unix)]
 fn path_to_cpath(path: &Path) -> *const ::std::os::raw::c_char {
-    path.as_os_str().as_bytes().as_ptr() as *const i8
+    path.as_os_str().as_bytes().as_ptr() as *const ::std::os::raw::c_char
 }

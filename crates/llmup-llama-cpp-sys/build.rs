@@ -130,6 +130,13 @@ fn lib_ggml(lib_path: &Path, out_path: &Path) -> Vec<PathBuf> {
 
     common.define("GGML_USE_CPU", None);
 
+    #[cfg(target_os = "linux")]
+    {
+        common.define("_XOPEN_SOURCE", "\"600\"");
+        common.define("_GNU_SOURCE", None);
+    }
+
+
     let metaldefs = [
         "GGML_USE_METAL",
         "GGML_METAL_EMBED_LIBRARY",
