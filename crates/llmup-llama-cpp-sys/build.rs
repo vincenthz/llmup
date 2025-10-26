@@ -8,6 +8,7 @@ use bindgen::Builder;
 use cc::Build;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(unused)]
 enum Backend {
     Metal,
 }
