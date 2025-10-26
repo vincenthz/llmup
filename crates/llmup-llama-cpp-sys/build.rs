@@ -13,6 +13,7 @@ enum Backend {
     Metal,
 }
 
+#[cfg(target_os = "macos")]
 const WARNING_FLAGS: &[&str] = &[
     //"-Wshadow",
     "-Wstrict-prototypes",
@@ -27,6 +28,23 @@ const WARNING_FLAGS: &[&str] = &[
     "-Wno-unused-function",
     "-Wunreachable-code-break",
     "-Wunreachable-code-return",
+    //"-Wdouble-promotion",
+];
+
+#[cfg(not(target_os = "macos"))]
+const WARNING_FLAGS: &[&str] = &[
+    //"-Wshadow",
+    "-Wstrict-prototypes",
+    "-Wpointer-arith",
+    "-Wmissing-prototypes",
+    "-Werror=implicit-int",
+    "-Werror=implicit-function-declaration",
+    "-Wall",
+    "-Wextra",
+    "-Wpedantic",
+    "-Wcast-qual",
+    "-Wno-unused-function",
+    "-Wunreachable-code-break",
     //"-Wdouble-promotion",
 ];
 
@@ -112,9 +130,12 @@ fn lib_ggml(lib_path: &Path, out_path: &Path) -> Vec<PathBuf> {
     common.define("ggml_base_EXPORTS", None);
 
     common.define("GGML_USE_CPU", None);
-    common.define("GGML_USE_METAL", None);
-    common.define("GGML_METAL_EMBED_LIBRARY", None);
-    common.define("ggml_metal_EXPORTS", None);
+
+    let metaldefs = [
+        "GGML_USE_METAL",
+        "GGML_METAL_EMBED_LIBRARY",
+        "ggml_metal_EXPORTS",
+    ];
 
     // specialize for CPP
     let mut cpp = common.clone();
@@ -161,6 +182,11 @@ fn lib_ggml(lib_path: &Path, out_path: &Path) -> Vec<PathBuf> {
 
     match backend {
         Some(Backend::Metal) => {
+            for metaldef in metaldefs {
+                c.define(metaldef, None);
+                cpp.define(metaldef, None);
+            }
+
             let backend_dir = src_path.join("ggml-metal");
             c.include(&backend_dir);
             cpp.include(&backend_dir);
