@@ -3,12 +3,12 @@ on:
   pull_request:
   push:
     branches:
-      - main
+      - master
     tags:
       - "*"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.ref_name == 'main' && github.sha || 'anysha' }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.ref_name == 'master' && github.sha || 'anysha' }}
   cancel-in-progress: true
 
 jobs:

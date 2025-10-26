@@ -153,7 +153,11 @@ fn lib_ggml(lib_path: &Path, out_path: &Path) -> Vec<PathBuf> {
         cpp.files(cpp_files.into_iter().map(|f| backend_dir.join(f)));
     }
 
+    #[cfg(target_os = "macos")]
     let backend = Some(Backend::Metal);
+    #[cfg(not(target_os = "macos"))]
+    let backend = None;
+
     match backend {
         Some(Backend::Metal) => {
             let backend_dir = src_path.join("ggml-metal");
@@ -227,6 +231,9 @@ _ggml_metallib_end:
             println!("cargo:rustc-link-lib=framework=Foundation");
             println!("cargo:rustc-link-lib=framework=MetalPerformanceShaders");
             println!("cargo:rustc-link-lib=framework=MetalKit");
+
+            //
+            println!("cargo:rustc-cfg=feature_metal");
         }
         None => {}
     }
