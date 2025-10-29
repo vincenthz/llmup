@@ -72,12 +72,6 @@ pub fn llama_run(
     line: &str,
     output: &Option<String>,
 ) -> anyhow::Result<()> {
-    if let Some(output) = output {
-        if std::fs::exists(output).unwrap_or(false) {
-            eprintln!("output file \"{}\" already exists, bailing", output);
-        }
-    }
-
     let model = context.model().clone();
     let vocab = model.vocab;
 
