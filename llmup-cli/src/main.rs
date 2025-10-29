@@ -295,7 +295,7 @@ async fn cmd_pull(name: String) -> anyhow::Result<()> {
         .build()
         .unwrap();
 
-    llmup_download::ollama::download_model::<ProgressBar>(
+    let download_results = llmup_download::ollama::download_model::<ProgressBar>(
         &client,
         &config,
         &store,
@@ -304,6 +304,16 @@ async fn cmd_pull(name: String) -> anyhow::Result<()> {
         &model_descr.variant,
     )
     .await?;
+
+    for (download_name, download_result) in download_results {
+        let r = match download_result {
+            llmup_download::ollama::DownloadResult::Skipped(blob) => {
+                format!("{} already downloaded", blob)
+            }
+            llmup_download::ollama::DownloadResult::Success(blob) => format!("{} downloaded", blob),
+        };
+        println!("{}: {}", download_name, r)
+    }
 
     Ok(())
 }

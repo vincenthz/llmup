@@ -84,7 +84,7 @@ pub async fn download_model<PB: ProgressDisplay>(
     registry: &ollama::Registry,
     model: &ollama::Model,
     variant: &ollama::Variant,
-) -> Result<(), DownloadError> {
+) -> Result<Vec<(String, DownloadResult)>, DownloadError> {
     let manifest_url = manifest_url(config, model, variant);
 
     let request = client.get(manifest_url).header(
@@ -97,7 +97,7 @@ pub async fn download_model<PB: ProgressDisplay>(
     if response.status() == reqwest::StatusCode::OK {
         let bytes = response.bytes().await.unwrap();
         let manifest = ollama::Manifest::from_json_bytes(&bytes).unwrap();
-        println!("{:#?}", manifest);
+        //println!("{:#?}", manifest);
 
         download_model_with_manifest::<PB>(
             client, config, store, &manifest, registry, model, variant,
@@ -109,6 +109,11 @@ pub async fn download_model<PB: ProgressDisplay>(
     }
 }
 
+pub enum DownloadResult {
+    Skipped(ollama::Blob),
+    Success(ollama::Blob),
+}
+
 async fn download_model_with_manifest<PB: ProgressDisplay>(
     client: &reqwest::Client,
     config: &OllamaConfig,
@@ -117,16 +122,21 @@ async fn download_model_with_manifest<PB: ProgressDisplay>(
     registry: &ollama::Registry,
     model: &ollama::Model,
     variant: &ollama::Variant,
-) -> Result<(), DownloadError> {
-    download_model_blob::<PB>(client, config, store, &manifest.config.digest).await?;
+) -> Result<Vec<(String, DownloadResult)>, DownloadError> {
+    let mut results = Vec::new();
+    let manifest_result =
+        download_model_blob::<PB>(client, config, store, &manifest.config.digest).await?;
+
+    results.push(("manifest".to_string(), manifest_result));
     for layer in &manifest.layers {
-        download_model_blob::<PB>(client, config, store, &layer.digest).await?;
+        let r = download_model_blob::<PB>(client, config, store, &layer.digest).await?;
+        results.push((layer.media_type.clone(), r))
     }
 
     store
         .add_manifest(registry, model, variant, manifest)
         .map_err(|e| DownloadError::ManifestAddingFailed(e))?;
-    Ok(())
+    Ok(results)
 }
 
 async fn download_model_blob<PB: ProgressDisplay>(
@@ -134,9 +144,9 @@ async fn download_model_blob<PB: ProgressDisplay>(
     config: &OllamaConfig,
     store: &ollama::OllamaStore,
     blob: &ollama::Blob,
-) -> Result<(), DownloadError> {
+) -> Result<DownloadResult, DownloadError> {
     if store.blob_exists(blob) {
-        return Ok(());
+        return Ok(DownloadResult::Skipped(blob.clone()));
     }
 
     let blob_url = blob_url(config, blob);
@@ -154,5 +164,5 @@ async fn download_model_blob<PB: ProgressDisplay>(
 
     std::fs::rename(blob_tmp_path, store.blob_path(blob))
         .map_err(|e| DownloadError::BlobCommitFailed(blob.clone(), e))?;
-    Ok(())
+    Ok(DownloadResult::Success(blob.clone()))
 }
