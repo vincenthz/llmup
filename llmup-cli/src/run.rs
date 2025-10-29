@@ -1,25 +1,41 @@
-use std::sync::atomic::AtomicBool;
+use std::io::Write;
+use std::{path::Path, sync::atomic::AtomicBool};
 
 use llmup_llama_cpp as llama;
 
 pub struct Output {
+    handle: Option<std::fs::File>,
     utf8_errors: usize,
 }
 
 impl Output {
     pub fn new() -> Self {
-        Self { utf8_errors: 0 }
+        Self {
+            utf8_errors: 0,
+            handle: None,
+        }
+    }
+
+    pub fn new_file<P: AsRef<Path>>(p: P) -> std::io::Result<Self> {
+        let file = std::fs::File::create(p)?;
+        Ok(Self {
+            utf8_errors: 0,
+            handle: Some(file),
+        })
     }
 
     pub fn append(&mut self, bytes: &[u8]) {
-        match std::str::from_utf8(bytes) {
-            Ok(valid) => {
-                print!("{}", valid);
-                use std::io::Write;
-                std::io::stdout().flush().unwrap();
-            }
-            Err(_) => {
-                self.utf8_errors += 1;
+        if let Some(file) = &mut self.handle {
+            file.write_all(bytes).unwrap();
+        } else {
+            match std::str::from_utf8(bytes) {
+                Ok(valid) => {
+                    print!("{}", valid);
+                    std::io::stdout().flush().unwrap();
+                }
+                Err(_) => {
+                    self.utf8_errors += 1;
+                }
             }
         }
     }
@@ -32,7 +48,7 @@ pub fn llama_init_logging(debug: bool) {
         {
             return;
         }
-        println!(
+        eprintln!(
             "{:<5} | {:<22} | {}",
             format!("{}", level),
             format!("{:?}", key),
@@ -51,7 +67,11 @@ pub fn llama_sampler() -> impl llama::Sampler {
     sampler
 }
 
-pub fn llama_run(context: &mut llmup_run::Context, line: &str) -> anyhow::Result<()> {
+pub fn llama_run(
+    context: &mut llmup_run::Context,
+    line: &str,
+    output: &Option<String>,
+) -> anyhow::Result<()> {
     let model = context.model().clone();
     let vocab = model.vocab;
 
@@ -68,7 +88,10 @@ pub fn llama_run(context: &mut llmup_run::Context, line: &str) -> anyhow::Result
     })
     .expect("Error setting Ctrl-C handler");
 
-    let mut output = Output::new();
+    let mut output = output
+        .as_ref()
+        .map(|o| Output::new_file(o))
+        .unwrap_or(Ok(Output::new()))?;
     let mut tokens = Vec::new();
     while !quit_requested.load(std::sync::atomic::Ordering::Relaxed) {
         let n = context.next_token(&mut sampler, &vocab);

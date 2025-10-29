@@ -39,7 +39,8 @@ async fn main() -> anyhow::Result<()> {
             no_prompt,
             system,
             input,
-        } => cmd_run(name, debug, model_path, no_prompt, system, input).await,
+            output,
+        } => cmd_run(name, debug, model_path, no_prompt, system, input, output).await,
         args::Commands::Info { name } => cmd_info(name).await,
         args::Commands::Bench { name, max_tokens } => cmd_bench(name, max_tokens).await,
         args::Commands::Embed { name } => cmd_embed(name).await,
@@ -187,6 +188,7 @@ async fn cmd_run(
     no_prompt: bool,
     system: Option<String>,
     input: Option<String>,
+    output: Option<String>,
 ) -> anyhow::Result<()> {
     const DEFAULT_SYSTEM_PROMPT: &str = "you are a chatbot answering question";
 
@@ -226,7 +228,7 @@ async fn cmd_run(
     let template = model.model_template_render(&parameters);
 
     let mut context = model.new_context();
-    run::llama_run(&mut context, &template)?;
+    run::llama_run(&mut context, &template, &output)?;
     Ok(())
 }
 

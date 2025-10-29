@@ -65,6 +65,8 @@ pub enum Commands {
         /// Don't ask for a prompt
         #[arg(long, default_value_t = false)]
         no_prompt: bool,
+        #[arg(long)]
+        output: Option<String>,
     },
     /// Bench model generation
     Bench {
