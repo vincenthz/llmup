@@ -72,6 +72,12 @@ pub fn llama_run(
     line: &str,
     output: &Option<String>,
 ) -> anyhow::Result<()> {
+    if let Some(output) = output {
+        if std::fs::exists(output).unwrap_or(false) {
+            eprintln!("output file \"{}\" already exists, bailing", output);
+        }
+    }
+
     let model = context.model().clone();
     let vocab = model.vocab;
 
@@ -100,10 +106,15 @@ pub fn llama_run(
             Some(t) => {
                 tokens.push(t);
                 context.append_tokens(&[t])?;
+                let attr = vocab.token_attr(t);
+                if attr.is_control() {
+                    continue;
+                }
                 let bytes = vocab.as_bytes(t);
                 output.append(&bytes);
             }
         }
     }
+
     Ok(())
 }

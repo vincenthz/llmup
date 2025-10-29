@@ -20,4 +20,4 @@ pub use sampler::{
 };
 pub use token::Token;
 pub use tokendata::{TokenData, TokenDataArray};
-pub use vocab::Vocab;
+pub use vocab::{TokenAttr, Vocab, VocabType};

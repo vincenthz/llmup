@@ -1,6 +1,6 @@
 use std::{ffi::c_char, ptr::null_mut, sync::Arc};
 
-use llmup_llama_cpp_sys::llama;
+use llmup_llama_cpp_sys::llama::{self, llama_token_attr};
 
 use crate::{Model, token::Token};
 
@@ -15,6 +15,65 @@ unsafe impl Send for Vocab {}
 unsafe impl Sync for Vocab {}
 
 pub struct VocabPtr(pub(crate) *const llama::llama_vocab);
+
+#[derive(Clone, Copy, Debug)]
+pub enum VocabType {
+    SPM,
+    BPE,
+    WPM,
+    UGM,
+    RWKV,
+    PLAMO2,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct TokenAttr(u32);
+
+impl TokenAttr {
+    pub fn is_undefined(self) -> bool {
+        self.0 == llama_token_attr::LLAMA_TOKEN_ATTR_UNDEFINED as u32
+    }
+
+    pub fn is_unknown(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_UNKNOWN as u32) != 0
+    }
+
+    pub fn is_unused(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_UNUSED as u32) != 0
+    }
+
+    pub fn is_normal(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_NORMAL as u32) != 0
+    }
+
+    pub fn is_control(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_CONTROL as u32) != 0
+    }
+
+    pub fn is_user_defined(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_USER_DEFINED as u32) != 0
+    }
+
+    pub fn is_byte(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_BYTE as u32) != 0
+    }
+
+    pub fn is_normalized(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_NORMALIZED as u32) != 0
+    }
+
+    pub fn is_lstrip(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_LSTRIP as u32) != 0
+    }
+
+    pub fn is_rstrip(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_RSTRIP as u32) != 0
+    }
+
+    pub fn is_single_word(self) -> bool {
+        (self.0 & llama_token_attr::LLAMA_TOKEN_ATTR_SINGLE_WORD as u32) != 0
+    }
+}
 
 impl Vocab {
     pub fn tokenize_size(&self, bytes: &[u8], first: bool) -> usize {
@@ -82,6 +141,26 @@ impl Vocab {
         }
         buf.truncate(n as usize);
         buf
+    }
+
+    pub fn token_attr(&self, token: Token) -> TokenAttr {
+        unsafe { TokenAttr(llama::llama_token_get_attr(self.ptr.0, token.0) as u32) }
+    }
+
+    pub fn vocab_type(&self) -> Option<VocabType> {
+        unsafe {
+            let ty = llama::llama_vocab_type(self.ptr.0);
+            match ty {
+                llama::llama_vocab_type::LLAMA_VOCAB_TYPE_NONE => None,
+                llama::llama_vocab_type::LLAMA_VOCAB_TYPE_SPM => Some(VocabType::SPM),
+                llama::llama_vocab_type::LLAMA_VOCAB_TYPE_BPE => Some(VocabType::BPE),
+                llama::llama_vocab_type::LLAMA_VOCAB_TYPE_WPM => Some(VocabType::WPM),
+                llama::llama_vocab_type::LLAMA_VOCAB_TYPE_UGM => Some(VocabType::UGM),
+                llama::llama_vocab_type::LLAMA_VOCAB_TYPE_RWKV => Some(VocabType::RWKV),
+                llama::llama_vocab_type::LLAMA_VOCAB_TYPE_PLAMO2 => Some(VocabType::PLAMO2),
+                _ => None,
+            }
+        }
     }
 
     pub fn as_string_lossy(&self, token: Token) -> String {
