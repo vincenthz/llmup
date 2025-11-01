@@ -21,3 +21,6 @@ pub use sampler::{
 pub use token::Token;
 pub use tokendata::{TokenData, TokenDataArray};
 pub use vocab::{TokenAttr, Vocab, VocabType};
+
+// TODO un-hardcode
+pub const PACKAGE_VERSION: &str = "0.1.0";
