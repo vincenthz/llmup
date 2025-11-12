@@ -18,7 +18,7 @@ members = [
     "crates/llmup-hf",
     "crates/llmup-run",
     "crates/skelm-ollama",
-    "llmup-cli",
+    "skelm-cli",
 ]
 
 resolver = "2"

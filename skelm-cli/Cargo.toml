@@ -1,5 +1,5 @@
 [package]
-name = "llmup-cli"
+name = "skelm-cli"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
