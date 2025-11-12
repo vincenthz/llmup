@@ -7,6 +7,7 @@ repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
 license.workspace = true
+rust-version.workspace = true
 description = "Llmup abstraction for running LLM"
 
 [dependencies]
@@ -22,11 +23,12 @@ minijinja = { version = "2" }
 minijinja-contrib = { version = "2", features = ["pycompat"] }
 gtmpl = { version = "0.7", optional = true }
 
-[target.'cfg(target_os = "macos")'.dependencies]
-mlx-lm = { workspace = true, optional = true }
-mlx-lm-utils = { workspace = true, optional = true }
+#[target.'cfg(target_os = "macos")'.dependencies]
+#mlx-lm = { workspace = true, optional = true }
+#mlx-lm-utils = { workspace = true, optional = true }
 
 [features]
 default = ["ollama", "mlx"]
 ollama = ["dep:gtmpl"]
-mlx = ["dep:mlx-lm", "dep:mlx-lm-utils"]
+#mlx = ["dep:mlx-lm", "dep:mlx-lm-utils"]
+mlx = []

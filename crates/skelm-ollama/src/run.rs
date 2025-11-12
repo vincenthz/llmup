@@ -1,44 +1,7 @@
-use chrono::Local;
-use llmup_store::ollama;
-pub use llmup_store::ollama::ModelDescr;
 use std::{path::PathBuf, str::FromStr};
-use thiserror::Error;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Role {
-    User,
-    System,
-    Assistant,
-}
-
-impl FromStr for Role {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "user" => Ok(Self::User),
-            "system" => Ok(Self::System),
-            "assistant" => Ok(Self::Assistant),
-            _ => Err(()),
-        }
-    }
-}
-
-pub struct Message(#[allow(unused)] String);
-pub struct Tool();
-
-pub struct OllamaRunParams {
-    pub messages: Vec<Message>,
-    pub tools: Vec<Tool>,
-    pub prompt: String,
-    pub suffix: String,
-    pub think: bool,
-    pub think_level: String,
-    pub is_think_set: bool,
-}
-
-#[derive(Clone)]
-pub struct Template {}
+use crate::storage::*;
+use thiserror::*;
 
 #[derive(Clone)]
 pub struct ModelConfig {
@@ -63,21 +26,18 @@ pub enum ModelConfigGetError {
     ParameterFileNotJson(serde_json::error::Error, ModelDescr),
 }
 
-pub fn model_config_get(
-    model_descr: &ollama::ModelDescr,
-) -> Result<ModelConfig, ModelConfigGetError> {
-    let store = llmup_store::ollama::OllamaStore::default();
+pub fn model_config_get(model_descr: &ModelDescr) -> Result<ModelConfig, ModelConfigGetError> {
+    let store = OllamaStore::default();
     let manifest = store
         .get_manifest(&model_descr)
         .map_err(|e| ModelConfigGetError::ManifestError(e, model_descr.clone()))?;
 
-    let Some(model_layer) = manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_MODEL)
-    else {
+    let Some(model_layer) = manifest.find_media_type(MEDIA_TYPE_IMAGE_MODEL) else {
         return Err(ModelConfigGetError::ModelImageNotFound(model_descr.clone()));
     };
 
     let template_data = if let Some(template_layer) =
-        manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_TEMPLATE)
+        manifest.find_media_type(MEDIA_TYPE_IMAGE_TEMPLATE)
     {
         Some(
             store
@@ -88,10 +48,8 @@ pub fn model_config_get(
         None
     };
 
-    let Some(params_layer) = manifest.find_media_type(llmup_store::ollama::MEDIA_TYPE_IMAGE_PARAMS)
-    else {
+    let Some(params_layer) = manifest.find_media_type(MEDIA_TYPE_IMAGE_PARAMS) else {
         return Err(ModelConfigGetError::ParametersMissing(model_descr.clone()));
-        //anyhow::bail!("no params found for {:?}", model_descr);
     };
     let params_data = store
         .blob_read_string(&params_layer.digest)
@@ -219,7 +177,7 @@ fn gtmpl_fn_current_date(args: &[gtmpl::Value]) -> Result<gtmpl::Value, gtmpl::F
         ));
     }
 
-    let date = Local::now().date_naive();
+    let date = chrono::Local::now().date_naive();
 
     Ok(gtmpl::Value::String(format!("{}", date)))
 }

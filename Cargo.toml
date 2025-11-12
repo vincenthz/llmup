@@ -18,6 +18,7 @@ members = [
     "crates/llmup-llama-cpp",
     "crates/llmup-hf",
     "crates/llmup-run",
+    "crates/skelm-ollama",
     "llmup-cli",
 ]
 
@@ -29,9 +30,10 @@ llmup-download = { version = "0.1", path = "crates/llmup-download" }
 llmup-run = { version = "0.1", path = "crates/llmup-run" }
 llmup-llama-cpp-sys = { version = "0.1", path = "crates/llmup-llama-cpp-sys" }
 llmup-llama-cpp = { version = "0.1", path = "crates/llmup-llama-cpp" }
+skelm-ollama = { version = "0.1", path = "crates/skelm-ollama" }
 
-mlx-lm = { version = "0.0.1" }
-mlx-lm-utils = { version = "0.0.1" }
+#mlx-lm = { version = "0.0.1" }
+#mlx-lm-utils = { version = "0.0.1" }
 
 tokio = { version = "1", features = ["full"] }
 thiserror = "2"

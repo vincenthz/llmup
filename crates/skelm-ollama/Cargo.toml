@@ -1,5 +1,5 @@
 [package]
-name = "llmup-store"
+name = "skelm-ollama"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -15,3 +15,8 @@ serde_json = "1"
 hex = "0.4"
 cryptoxide = "0.5"
 ulid = "1.2"
+url = "2"
+chrono = "*"
+gtmpl = { version = "0.7" }
+thiserror.workspace = true
+anyhow.workspace = true
