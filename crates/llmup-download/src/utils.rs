@@ -1,4 +1,4 @@
-use llmup_store::ollama;
+use skelm_ollama as ollama;
 use tokio::io::AsyncReadExt;
 
 pub trait ProgressDisplay {

@@ -10,7 +10,7 @@ license.workspace = true
 description = "Llmup Utilities for download"
 
 [dependencies]
-llmup-store.workspace = true
+skelm-ollama.workspace = true
 tokio.workspace = true
 thiserror.workspace = true
 

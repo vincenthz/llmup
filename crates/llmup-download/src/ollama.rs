@@ -1,67 +1,9 @@
 use crate::{ProgressDisplay, http::HttpError};
 
 use super::http;
-use llmup_store::ollama;
 use reqwest::StatusCode;
+use skelm_ollama as ollama;
 use thiserror::Error;
-use url::Url;
-
-#[derive(Clone)]
-pub struct OllamaConfig {
-    pub base_url: Url,
-    pub version: String,
-}
-
-const BASE_URL: &str = "https://registry.ollama.ai/";
-const VERSION: &str = "v2";
-
-impl Default for OllamaConfig {
-    fn default() -> Self {
-        let base_url = Url::parse(BASE_URL).unwrap();
-        Self {
-            base_url,
-            version: String::from(VERSION),
-        }
-    }
-}
-
-impl OllamaConfig {
-    pub fn host(&self) -> String {
-        format!(
-            "{}",
-            self.base_url
-                .host()
-                .expect("valid host for ollama config registry")
-        )
-    }
-}
-
-pub fn blob_url(config: &OllamaConfig, blob: &ollama::Blob) -> Url {
-    config
-        .base_url
-        .join(&format!(
-            "{}/library/registry/blobs/{}",
-            &config.version,
-            &blob.as_path_name()
-        ))
-        .unwrap()
-}
-
-pub fn manifest_url(
-    config: &OllamaConfig,
-    model: &ollama::Model,
-    variant: &ollama::Variant,
-) -> Url {
-    config
-        .base_url
-        .join(&format!(
-            "{}/library/{}/manifests/{}",
-            &config.version,
-            model.as_str(),
-            variant.as_str()
-        ))
-        .unwrap()
-}
 
 #[derive(Debug, Error)]
 pub enum DownloadError {
@@ -79,13 +21,13 @@ pub enum DownloadError {
 
 pub async fn download_model<PB: ProgressDisplay>(
     client: &reqwest::Client,
-    config: &OllamaConfig,
+    config: &ollama::OllamaConfig,
     store: &ollama::OllamaStore,
     registry: &ollama::Registry,
     model: &ollama::Model,
     variant: &ollama::Variant,
 ) -> Result<Vec<(String, DownloadResult)>, DownloadError> {
-    let manifest_url = manifest_url(config, model, variant);
+    let manifest_url = config.manifest_url(model, variant);
 
     let request = client.get(manifest_url).header(
         reqwest::header::CONTENT_TYPE,
@@ -116,7 +58,7 @@ pub enum DownloadResult {
 
 async fn download_model_with_manifest<PB: ProgressDisplay>(
     client: &reqwest::Client,
-    config: &OllamaConfig,
+    config: &ollama::OllamaConfig,
     store: &ollama::OllamaStore,
     manifest: &ollama::Manifest,
     registry: &ollama::Registry,
@@ -141,7 +83,7 @@ async fn download_model_with_manifest<PB: ProgressDisplay>(
 
 async fn download_model_blob<PB: ProgressDisplay>(
     client: &reqwest::Client,
-    config: &OllamaConfig,
+    config: &ollama::OllamaConfig,
     store: &ollama::OllamaStore,
     blob: &ollama::Blob,
 ) -> Result<DownloadResult, DownloadError> {
@@ -149,7 +91,7 @@ async fn download_model_blob<PB: ProgressDisplay>(
         return Ok(DownloadResult::Skipped(blob.clone()));
     }
 
-    let blob_url = blob_url(config, blob);
+    let blob_url = config.blob_url(blob);
     let blob_tmp_path = store.blob_path_tmp(blob);
 
     let mut blob_context = ollama::BlobContext::new_from_blob_type(blob);

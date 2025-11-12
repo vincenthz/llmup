@@ -11,7 +11,7 @@ rust-version.workspace = true
 description = "Llmup abstraction for running LLM"
 
 [dependencies]
-llmup-store.workspace = true
+skelm-ollama.workspace = true
 llmup-download.workspace = true
 llmup-llama-cpp.workspace = true
 thiserror.workspace = true
@@ -21,14 +21,12 @@ ctrlc = "3.5"
 serde_json = "1"
 minijinja = { version = "2" }
 minijinja-contrib = { version = "2", features = ["pycompat"] }
-gtmpl = { version = "0.7", optional = true }
 
 #[target.'cfg(target_os = "macos")'.dependencies]
 #mlx-lm = { workspace = true, optional = true }
 #mlx-lm-utils = { workspace = true, optional = true }
 
 [features]
-default = ["ollama", "mlx"]
-ollama = ["dep:gtmpl"]
+default = ["mlx"]
 #mlx = ["dep:mlx-lm", "dep:mlx-lm-utils"]
 mlx = []

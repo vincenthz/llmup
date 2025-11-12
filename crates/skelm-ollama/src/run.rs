@@ -3,6 +3,39 @@ use std::{path::PathBuf, str::FromStr};
 use crate::storage::*;
 use thiserror::*;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Role {
+    User,
+    System,
+    Assistant,
+}
+
+impl FromStr for Role {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "user" => Ok(Self::User),
+            "system" => Ok(Self::System),
+            "assistant" => Ok(Self::Assistant),
+            _ => Err(()),
+        }
+    }
+}
+
+pub struct Message(#[allow(unused)] String);
+pub struct Tool();
+
+pub struct RunParams {
+    pub messages: Vec<Message>,
+    pub tools: Vec<Tool>,
+    pub prompt: String,
+    pub suffix: String,
+    pub think: bool,
+    pub think_level: String,
+    pub is_think_set: bool,
+}
+
 #[derive(Clone)]
 pub struct ModelConfig {
     pub model_path: PathBuf,

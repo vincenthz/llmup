@@ -7,9 +7,9 @@ use std::{
 
 use anyhow::Context;
 use clap::Parser;
-use llmup_download::ollama::OllamaConfig;
-use llmup_run::{ModelDescr, ModelParameters, ollama as ollama_run};
-use llmup_store::ollama::OllamaStore;
+use llmup_run::{ModelDescr, ModelParameters};
+use skelm_ollama as ollama;
+use skelm_ollama::{OllamaConfig, OllamaStore};
 
 use reqwest::ClientBuilder;
 
@@ -60,9 +60,7 @@ async fn cmd_set(name: String, key: String, value: String) -> anyhow::Result<()>
                 let src_file = std::fs::File::open(file_path)?;
                 let blob = store.add_blob_from_file(src_file)?;
                 println!("added blob {}", blob);
-                if let Some(layer) =
-                    manifest.find_media_type_mut(llmup_store::ollama::MEDIA_TYPE_IMAGE_MODEL)
-                {
+                if let Some(layer) = manifest.find_media_type_mut(ollama::MEDIA_TYPE_IMAGE_MODEL) {
                     layer.digest = blob;
                 } else {
                     anyhow::bail!("manifest doesn't have a model")
@@ -196,7 +194,7 @@ async fn cmd_run(
     let model_descr = if model_path {
         ModelDescr::Path(PathBuf::from(name))
     } else {
-        ModelDescr::Ollama(llmup_run::ollama::ModelDescr::from_str(&name).unwrap())
+        ModelDescr::Ollama(ollama::ModelDescr::from_str(&name).unwrap())
     };
 
     let input_data = if let Some(input_file) = input {
@@ -259,7 +257,7 @@ async fn cmd_list(filter: Option<String>) -> anyhow::Result<()> {
                 let metadata = fs.metadata().await?;
                 let modified = metadata.modified()?;
 
-                let descr = ollama_run::ModelDescr {
+                let descr = ollama::ModelDescr {
                     registry: reg.clone(),
                     model: model.clone(),
                     variant: variant.clone(),
@@ -351,7 +349,7 @@ async fn cmd_verify(blobs: bool) -> anyhow::Result<()> {
         for model in models {
             let variants = store.list_model_variants(&reg, &model)?;
             for variant in variants {
-                let model_descr = ollama_run::ModelDescr {
+                let model_descr = ollama::ModelDescr {
                     registry: reg.clone(),
                     model: model.clone(),
                     variant: variant.clone(),
@@ -388,14 +386,14 @@ async fn cmd_verify(blobs: bool) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn parse_ollama_descr(name: &str) -> anyhow::Result<ollama_run::ModelDescr> {
-    ollama_run::ModelDescr::from_str(name).map_err(|_| {
+fn parse_ollama_descr(name: &str) -> anyhow::Result<ollama::ModelDescr> {
+    ollama::ModelDescr::from_str(name).map_err(|_| {
         anyhow::anyhow!("Invalid Ollama model description: expecting <registry>/<model>:<variant> or <model>:<variant>")
     })
 }
 
 fn parse_model_descr(name: &str) -> anyhow::Result<llmup_run::ModelDescr> {
-    ollama_run::ModelDescr::from_str(name).map_err(|_| {
+    ollama::ModelDescr::from_str(name).map_err(|_| {
         anyhow::anyhow!("Invalid Ollama model description: expecting <registry>/<model>:<variant> or <model>:<variant>")
     }).map(llmup_run::ModelDescr::Ollama)
 }

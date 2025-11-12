@@ -12,7 +12,6 @@ rust-version = "1.85.0"
 
 [workspace]
 members = [
-    "crates/llmup-store",
     "crates/llmup-download",
     "crates/llmup-llama-cpp-sys",
     "crates/llmup-llama-cpp",
@@ -25,7 +24,6 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-llmup-store = { version = "0.1", path = "crates/llmup-store" }
 llmup-download = { version = "0.1", path = "crates/llmup-download" }
 llmup-run = { version = "0.1", path = "crates/llmup-run" }
 llmup-llama-cpp-sys = { version = "0.1", path = "crates/llmup-llama-cpp-sys" }

@@ -38,15 +38,15 @@ impl OllamaConfig {
             ))
             .unwrap()
     }
-}
 
-pub fn blob_url(config: &OllamaConfig, blob: &super::Blob) -> Url {
-    config
-        .base_url
-        .join(&format!(
-            "{}/library/registry/blobs/{}",
-            &config.version,
-            &blob.as_path_name()
-        ))
-        .unwrap()
+    pub fn manifest_url(&self, model: &super::Model, variant: &super::Variant) -> Url {
+        self.base_url
+            .join(&format!(
+                "{}/library/{}/manifests/{}",
+                &self.version,
+                model.as_str(),
+                variant.as_str()
+            ))
+            .unwrap()
+    }
 }
