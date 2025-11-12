@@ -1,5 +1,5 @@
 [package]
-name = "llmup-llama-cpp-sys"
+name = "skelm-llama-cpp-sys"
 version = "0.1.0"
 edition.workspace = true
 authors.workspace = true
@@ -7,7 +7,7 @@ repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
 license.workspace = true
-description = "Llmup system wrapper for llama.cpp"
+description = "skelm system wrapper for llama.cpp"
 
 [dependencies]
 link-cplusplus = "1"

@@ -1,6 +1,6 @@
 use std::ptr::null_mut;
 
-use llmup_llama_cpp_sys::llama;
+use skelm_llama_cpp_sys::llama;
 
 use crate::token::Token;
 

@@ -1,4 +1,4 @@
-use llmup_llama_cpp_sys::llama;
+use skelm_llama_cpp_sys::llama;
 use std::{ffi::CStr, sync::Once};
 
 static LOG_CALLBACK: Once = Once::new();

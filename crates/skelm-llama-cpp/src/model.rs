@@ -1,6 +1,4 @@
-use llmup_llama_cpp_sys;
-
-use llmup_llama_cpp_sys::llama;
+use skelm_llama_cpp_sys::llama;
 use std::ptr::null_mut;
 use std::sync::Arc;
 use std::{ffi::CStr, path::Path};
@@ -84,7 +82,13 @@ impl Model {
     pub fn description(&self) -> String {
         let sz = unsafe { llama::llama_model_desc(self.ptr.0, null_mut(), 0) as usize };
         let mut buf = vec![0; sz];
-        unsafe { llama::llama_model_desc(self.ptr.0, buf.as_mut_ptr() as *mut ::std::os::raw::c_char, sz) };
+        unsafe {
+            llama::llama_model_desc(
+                self.ptr.0,
+                buf.as_mut_ptr() as *mut ::std::os::raw::c_char,
+                sz,
+            )
+        };
         String::from_utf8(buf).unwrap()
     }
 

@@ -11,7 +11,7 @@ license.workspace = true
 [dependencies]
 llmup-download.workspace = true
 llmup-run.workspace = true
-llmup-llama-cpp.workspace = true
+skelm-llama-cpp.workspace = true
 skelm-ollama.workspace = true
 anyhow.workspace = true
 tokio.workspace = true

@@ -1,8 +1,8 @@
 use std::{ffi::c_char, ptr::null_mut, sync::Arc};
 
-use llmup_llama_cpp_sys::llama::{self, llama_token_attr};
+use skelm_llama_cpp_sys::llama::{self, llama_token_attr};
 
-use crate::{Model, token::Token};
+use crate::{token::Token, Model};
 
 #[derive(Clone)]
 #[allow(dead_code)]

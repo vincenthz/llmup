@@ -1,6 +1,4 @@
-use llmup_llama_cpp_sys;
-
-use llmup_llama_cpp_sys::llama;
+use skelm_llama_cpp_sys::llama;
 
 use crate::token::Token;
 use crate::{Context, TokenData, TokenDataArray};

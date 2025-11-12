@@ -7,7 +7,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use thiserror::Error;
 
-use llmup_llama_cpp as llama;
+use skelm_llama_cpp as llama;
 use skelm_ollama as ollama;
 
 pub use template::chat_template;

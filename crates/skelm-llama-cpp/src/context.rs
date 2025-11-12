@@ -1,7 +1,7 @@
-use llmup_llama_cpp_sys::llama;
+use skelm_llama_cpp_sys::llama;
 use thiserror::Error;
 
-use crate::{Model, Sampler, Vocab, batch::Batch, token::Token};
+use crate::{batch::Batch, token::Token, Model, Sampler, Vocab};
 
 #[allow(dead_code)]
 pub struct Context {

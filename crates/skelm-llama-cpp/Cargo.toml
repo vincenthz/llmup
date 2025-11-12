@@ -1,5 +1,5 @@
 [package]
-name = "llmup-llama-cpp"
+name = "skelm-llama-cpp"
 version = "0.1.0"
 edition.workspace = true
 authors.workspace = true
@@ -7,8 +7,8 @@ repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
 license.workspace = true
-description = "Llmup rust safe wrapper for llama.cpp"
+description = "skelm rust safe wrapper for llama.cpp"
 
 [dependencies]
-llmup-llama-cpp-sys.workspace = true
+skelm-llama-cpp-sys.workspace = true
 thiserror.workspace = true

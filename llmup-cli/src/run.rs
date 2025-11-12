@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::{path::Path, sync::atomic::AtomicBool};
 
-use llmup_llama_cpp as llama;
+use skelm_llama_cpp as llama;
 
 pub struct Output {
     handle: Option<std::fs::File>,

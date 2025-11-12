@@ -13,7 +13,7 @@ description = "Llmup abstraction for running LLM"
 [dependencies]
 skelm-ollama.workspace = true
 llmup-download.workspace = true
-llmup-llama-cpp.workspace = true
+skelm-llama-cpp.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true
 chrono = "*"
