@@ -68,7 +68,7 @@ pub fn llama_sampler() -> impl llama::Sampler {
 }
 
 pub fn llama_run(
-    context: &mut llmup_run::Context,
+    context: &mut skelm_exec::Context,
     line: &str,
     output: &Option<String>,
 ) -> anyhow::Result<()> {

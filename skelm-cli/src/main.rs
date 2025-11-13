@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::Context;
 use clap::Parser;
-use llmup_run::{ModelDescr, ModelParameters};
+use skelm_exec::{ModelDescr, ModelParameters};
 use skelm_ollama as ollama;
 use skelm_ollama::{OllamaConfig, OllamaStore};
 
@@ -86,7 +86,7 @@ async fn cmd_set(name: String, key: String, value: String) -> anyhow::Result<()>
 
 async fn cmd_info(name: String) -> anyhow::Result<()> {
     let model_descr = parse_model_descr(&name)?;
-    let model = llmup_run::Model::load(&model_descr)?;
+    let model = skelm_exec::Model::load(&model_descr)?;
 
     if let Some(chat_template) = model.model.chat_template() {
         println!("chat-template:\n{}", chat_template)
@@ -97,7 +97,7 @@ async fn cmd_info(name: String) -> anyhow::Result<()> {
 
 async fn cmd_embed(name: String) -> anyhow::Result<()> {
     let model_descr = parse_model_descr(&name)?;
-    let model = llmup_run::Model::load(&model_descr)?;
+    let model = skelm_exec::Model::load(&model_descr)?;
 
     run::llama_init_logging(false);
 
@@ -122,7 +122,7 @@ async fn cmd_bench(name: String, max_tokens: Option<u64>) -> anyhow::Result<()> 
 
     run::llama_init_logging(false);
 
-    let model = llmup_run::Model::load(&model_descr)?;
+    let model = skelm_exec::Model::load(&model_descr)?;
 
     let mut context = model.new_context().1;
     let vocab = model.vocab;
@@ -228,7 +228,7 @@ async fn cmd_run(
     run::llama_init_logging(debug);
     tracing_subscriber::fmt::init();
 
-    let model = llmup_run::Model::load(&model_descr)?;
+    let model = skelm_exec::Model::load(&model_descr)?;
 
     let parameters = ModelParameters { system, prompt };
     let template = model.model_template_render(&parameters);
@@ -327,7 +327,7 @@ async fn cmd_pull(name: String) -> anyhow::Result<()> {
 }
 
 async fn cmd_remove(name: String) -> anyhow::Result<()> {
-    let llmup_run::ModelDescr::Ollama(model_descr) = parse_model_descr(&name)? else {
+    let skelm_exec::ModelDescr::Ollama(model_descr) = parse_model_descr(&name)? else {
         anyhow::bail!("ollama invalid name")
     };
     let store = OllamaStore::default();
@@ -392,8 +392,8 @@ fn parse_ollama_descr(name: &str) -> anyhow::Result<ollama::ModelDescr> {
     })
 }
 
-fn parse_model_descr(name: &str) -> anyhow::Result<llmup_run::ModelDescr> {
+fn parse_model_descr(name: &str) -> anyhow::Result<skelm_exec::ModelDescr> {
     ollama::ModelDescr::from_str(name).map_err(|_| {
         anyhow::anyhow!("Invalid Ollama model description: expecting <registry>/<model>:<variant> or <model>:<variant>")
-    }).map(llmup_run::ModelDescr::Ollama)
+    }).map(skelm_exec::ModelDescr::Ollama)
 }

@@ -10,7 +10,7 @@ license.workspace = true
 
 [dependencies]
 llmup-download.workspace = true
-llmup-run.workspace = true
+skelm-exec.workspace = true
 skelm-llama-cpp.workspace = true
 skelm-ollama.workspace = true
 anyhow.workspace = true

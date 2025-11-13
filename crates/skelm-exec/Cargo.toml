@@ -1,5 +1,5 @@
 [package]
-name = "llmup-run"
+name = "skelm-exec"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -8,11 +8,11 @@ keywords.workspace = true
 categories.workspace = true
 license.workspace = true
 rust-version.workspace = true
-description = "Llmup abstraction for running LLM"
+description = "Skelm abstraction for running language model in various mode"
 
 [dependencies]
-skelm-ollama.workspace = true
 llmup-download.workspace = true
+skelm-ollama.workspace = true
 skelm-llama-cpp.workspace = true
 thiserror.workspace = true
 anyhow.workspace = true

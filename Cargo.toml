@@ -4,7 +4,7 @@ edition = "2024"
 authors = [
     "Vincent Hanquez <vincent@coretype.io>"
 ]
-repository = "https://github.com/vincenthz/llmup"
+repository = "https://github.com/vincenthz/skelm-core"
 keywords = ["AI", "llama", "mlx", "deep-learning", "machine-learning"]
 categories = ["science"]
 license = "MIT OR Apache-2.0"
@@ -16,7 +16,7 @@ members = [
     "crates/skelm-llama-cpp-sys",
     "crates/skelm-llama-cpp",
     "crates/llmup-hf",
-    "crates/llmup-run",
+    "crates/skelm-exec",
     "crates/skelm-ollama",
     "skelm-cli",
 ]
@@ -25,7 +25,7 @@ resolver = "2"
 
 [workspace.dependencies]
 llmup-download = { version = "0.1", path = "crates/llmup-download" }
-llmup-run = { version = "0.1", path = "crates/llmup-run" }
+skelm-exec = { version = "0.1", path = "crates/skelm-exec" }
 skelm-llama-cpp-sys = { version = "0.1", path = "crates/skelm-llama-cpp-sys" }
 skelm-llama-cpp = { version = "0.1", path = "crates/skelm-llama-cpp" }
 skelm-ollama = { version = "0.1", path = "crates/skelm-ollama" }
