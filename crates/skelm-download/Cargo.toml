@@ -1,5 +1,5 @@
 [package]
-name = "llmup-download"
+name = "skelm-download"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -7,7 +7,7 @@ repository.workspace = true
 keywords.workspace = true
 categories.workspace = true
 license.workspace = true
-description = "Llmup Utilities for download"
+description = "Skelm Utilities for download"
 
 [dependencies]
 skelm-ollama.workspace = true

@@ -1,5 +1,5 @@
 use indicatif::ProgressStyle;
-use llmup_download::ProgressDisplay;
+use skelm_download::ProgressDisplay;
 
 pub struct ProgressBar(indicatif::ProgressBar);
 

@@ -9,7 +9,7 @@ categories.workspace = true
 license.workspace = true
 
 [dependencies]
-llmup-download.workspace = true
+skelm-download.workspace = true
 skelm-exec.workspace = true
 skelm-llama-cpp.workspace = true
 skelm-ollama.workspace = true

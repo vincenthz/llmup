@@ -1,5 +1,5 @@
 [package]
-name = "llmup-hf"
+name = "skelm-hf"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

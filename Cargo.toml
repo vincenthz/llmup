@@ -12,10 +12,10 @@ rust-version = "1.85.0"
 
 [workspace]
 members = [
-    "crates/llmup-download",
+    "crates/skelm-download",
     "crates/skelm-llama-cpp-sys",
     "crates/skelm-llama-cpp",
-    "crates/llmup-hf",
+    "crates/skelm-hf",
     "crates/skelm-exec",
     "crates/skelm-ollama",
     "skelm-cli",
@@ -24,7 +24,7 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-llmup-download = { version = "0.1", path = "crates/llmup-download" }
+skelm-download = { version = "0.1", path = "crates/skelm-download" }
 skelm-exec = { version = "0.1", path = "crates/skelm-exec" }
 skelm-llama-cpp-sys = { version = "0.1", path = "crates/skelm-llama-cpp-sys" }
 skelm-llama-cpp = { version = "0.1", path = "crates/skelm-llama-cpp" }
